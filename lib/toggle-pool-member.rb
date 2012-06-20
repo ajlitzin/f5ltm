@@ -77,7 +77,7 @@ def enable_pool_member(lb, pool, member_def)
   member_session_state_lists = [member_session_state_list]
 
   lb.icontrol.locallb.pool_member.set_session_enabled_state([pool.name], member_session_state_lists)
-  puts "Pool #{pool.name} member {#{node_ip}:#{node_port}} state set to '#{STATE_ENABLED}'"
+  puts "Pool #{pool.name} member {#{node_ip}:#{node_port}} state set to STATE_ENABLED'"
 end
 
 
@@ -94,7 +94,7 @@ def disable_pool_member(lb, pool, member_def)
   member_session_state_lists = [member_session_state_list]
 
   lb.icontrol.locallb.pool_member.set_session_enabled_state([pool.name], member_session_state_lists)
-  puts "Pool #{pool.name} member {#{node_ip}:#{node_port}} state set to '#{STATE_DISABLED}'"
+  puts "Pool #{pool.name} member {#{node_ip}:#{node_port}} state set to STATE_DISABLED"
 end
 
 

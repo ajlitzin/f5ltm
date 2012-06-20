@@ -2,7 +2,7 @@
 # Original Code by Jos Backus http://www.catnook.com/programs/f5-icontrol/
 
 
-require 'icontrol'
+require './icontrol.rb'
 
 module F5
 
@@ -15,6 +15,8 @@ module F5
 
       def initialize(lb, address)
         @lb, @address = lb, address
+		pp @lb
+		pp @address
         clear
       end
 
@@ -205,6 +207,14 @@ module F5
       end
 
     end # class PoolMember
+
+    class Monitor
+    
+      def initialize(monitor, parent)
+      end
+
+
+    end # class Monitor
 
     def initialize(hostname, opts={})
       @hostname = hostname

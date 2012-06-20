@@ -1,0 +1,28 @@
+monitor:
+  http:
+    #send: 'GET /dude HTTP/1.1\r\n'
+	#recv: Web Service is ok
+	 
+pool:
+  name: my_pool_555
+  lb_method: least_connections
+  monitor_name: http
+  pool_members:
+  -
+    memberdef: 172.16.4.5555
+    priority: 2
+  -
+    memberdef: 172.16.4.6:555
+    priority: 2
+  - 
+    memberdef: 172.16.4.7:555
+    priority: 0
+   
+virtual_server:
+  pool_name: my_pool_555
+  ip: 10.1.94.55
+  netmask: 255.255.255.255
+  port: 80
+  snat: ''
+  ssl_client_profile: empty
+  protocol: http

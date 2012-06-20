@@ -1,0 +1,6 @@
+pool:
+  name: my_pool_555
+  lb_method: least_connections
+  monitor:
+    name: blah
+    

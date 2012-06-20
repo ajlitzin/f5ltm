@@ -3,6 +3,7 @@
 
 require 'rubygems'
 require 'soap/wsdlDriver'
+require 'yaml'
 
 module F5
 
@@ -23,11 +24,12 @@ module F5
       end
 
       @wsdl = configuration['wsdl']
+	  pp @wsdl
       username = configuration['username']
       password = configuration['password']
 
       @endpoint_url = "#{method}://#{endpoint}/iControl/iControlPortal.cgi"
-      @basic_auth = [@endpoint_url, username, password]
+	  @basic_auth = [@endpoint_url, username, password]
 
       @modules = {}
       @wsdl.each do |module_name, interfaces|

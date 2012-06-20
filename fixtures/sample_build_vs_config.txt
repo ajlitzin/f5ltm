@@ -1,0 +1,22 @@
+monitor:
+  http:
+     send:
+	 recv:
+	 
+pool:
+  name:
+  lb_method:
+  pool_members:
+    m1: memberip:port:pga
+	m2: memberip:port:pga
+  monitor_name:
+  
+  
+virtual_server:
+  pool_name:
+  ip:
+  netmask:
+  port:
+  snat:
+  ssl_client_profile:
+  protocol:
