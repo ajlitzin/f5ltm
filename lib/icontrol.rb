@@ -24,7 +24,6 @@ module F5
       end
 
       @wsdl = configuration['wsdl']
-	  pp @wsdl
       username = configuration['username']
       password = configuration['password']
 
