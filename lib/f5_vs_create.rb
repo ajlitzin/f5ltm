@@ -82,7 +82,7 @@ end
 
 def create_virt_s(lb, vs_def, vs_wildmask, vs_resource, vs_profiles)
 pp "our profile #{vs_profiles}"
-  debugger
+  #debugger
   lb.icontrol.locallb.virtual_server.create(vs_def,vs_wildmask,vs_resource,vs_profiles)
 end
 
@@ -90,31 +90,26 @@ end
 options = Optparser.parse(ARGV)
 
 # exit if required parameters are missing
-# this needs a lot of work
+# this may need some work
 # maybe swap optparse for trollop?
-#Kernel.abort "Missing Argument" unless options.respond_to?(:name)
 REQ_PARAMS = [:bigip, :name, :address, :port]
 REQ_PARAMS.find do |p|
   Kernel.abort "Missing Argument: #{p}" unless options.respond_to?(p)
 end
-
-pp options
 
 lb = F5::LoadBalancer.new(options.bigip, :config_file => '../fixtures/config-andy.yaml', :connect_timeout => 10)
 
 #myvs = VirtualServer.new("andyruby_testvs", "192.168.94.55", 5556, "PROTOCOL_TCP")
 myvs = VirtualServer.new(options.name, options.address, options.port.to_i, options.protocol)
 myvs_list = [myvs.to_hash]
-pp "my virtual server hash: #{myvs_list}"
+
 #my_vs_resource = VirtualServerResource.new("RESOURCE_TYPE_POOL","name_of_default_pool")
 my_vs_resource = VirtualServerResource.new(options.resource_type,options.default_pool_name)
 my_vs_resource_list = [my_vs_resource.to_hash]
-pp "virtualserver resource list: #{my_vs_resource_list}"
-pp ""
-#my_vs_profile = [[{profile_context: "PROFILE_CONTEXT_TYPE_ALL", profile_name: "http"}]]
-my_vs_profile = {profile_context: options.profile_context, profile_name: options.profile_name}
-my_vs_profile_list = [my_vs_profile]
+
+#my_vs_profile = {profile_context: options.profile_context, profile_name: options.profile_name}
+my_vs_profile = VirtualServerProfile.new(options.profile_context, options.profile_name)
+my_vs_profile_list = [my_vs_profile.to_hash]
 my_vs_profile_lists = [my_vs_profile_list]
-#create_virt_s(lb, myvs, "255.255.255.255", my_vs_resource, my_vs_profile_lists)
-#create_virt_s(lb, myvs, options.netmask, my_vs_resource, my_vs_profile_lists)
+
 create_virt_s(lb, myvs_list, options.netmask, my_vs_resource_list, my_vs_profile_lists)
