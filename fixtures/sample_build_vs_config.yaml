@@ -5,7 +5,7 @@ monitor:
   recv: 'Web Service is OK'
 	 
 pool:
-  name: my_pool_555
+  name: andy_pool_555
   lb_method: least_connections
   monitor_name: http
   pool_members:
@@ -26,8 +26,8 @@ virtual_server:
   protocol: ""
   netmask: ""
   type: ""
-  default_pool_name: my_pool_555
-  profile_context: ""
+  default_pool_name: andy_pool_555
+  profile_context:
   profile_name: http
   snat: ""
   ssl_client_profile: ""
