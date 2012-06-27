@@ -33,19 +33,19 @@ class Optparser
       opts.on("-p", "--port PORT", "Virtual Server Port") do |port|
         options.port = port
       end
-      opts.on("-P", "--protocol PROTOCOL", "Protocol Type") do |protocol|
+      opts.on("-P", "--protocol [PROTOCOL]", "Protocol Type") do |protocol|
         options.protocol = protocol || "PROTOCOL_TCP"
       end
-      opts.on("-m", "--mask NETMASK", "Subnet Mask, 255.255.255.255 for hosts") do |mask|
-        options.netmask = [mask] || ["255.255.255.255"]
+      opts.on("-m", "--mask [NETMASK]", "Subnet Mask, 255.255.255.255 for hosts") do |mask|
+        options.netmask = mask || "255.255.255.255"
       end
-      opts.on("-t", "--resource_type TYPE", "Virtual Server Resource Type") do |type|
+      opts.on("-t", "--resource_type [TYPE]", "Virtual Server Resource Type") do |type|
         options.resource_type = type || "RESOURCE_TYPE_POOL"
       end
-      opts.on("-l", "--pool_name POOL NAME", "Default Pool Name") do |poolname|
+      opts.on("-l", "--pool_name [POOL NAME]", "Default Pool Name") do |poolname|
         options.default_pool_name = poolname || ""
       end
-      opts.on("--profile_context PROFILE_CONTEXT_TYPE", [:PROFILE_CONTEXT_TYPE_ALL, :PROFILE_CONTEXT_TYPE_CLIENT, :PROFILE_CONTEXT_TYPE_SERVER],   "Select Profile Context Type (Profile_context_type_all,MOREDUDE)") do |pc|
+      opts.on("--profile_context [PROFILE_CONTEXT_TYPE]", [:PROFILE_CONTEXT_TYPE_ALL, :PROFILE_CONTEXT_TYPE_CLIENT, :PROFILE_CONTEXT_TYPE_SERVER],   "Select Profile Context Type (Profile_context_type_all,MOREDUDE)") do |pc|
         options.profile_context = pc || "PROFILE_CONTEXT_TYPE_ALL"
       end
       opts.on("--profile_name NAME", [:http], "Select Profile Name (http)") do |pn|
@@ -95,7 +95,7 @@ REQ_PARAMS = [:bigip, :name, :address, :port]
 REQ_PARAMS.find do |p|
   Kernel.abort "Missing Argument: #{p}" unless options.respond_to?(p)
 end
-
+pp "options.bigip: #{options.bigip}"
 lb = F5::LoadBalancer.new(options.bigip, :config_file => '../fixtures/config-andy.yaml', :connect_timeout => 10)
 
 #myvs = VirtualServer.new("andyruby_testvs", "192.168.94.55", 5556, "PROTOCOL_TCP")
@@ -111,4 +111,7 @@ my_vs_profile = VirtualServerProfile.new(options.profile_context, options.profil
 my_vs_profile_list = [my_vs_profile.to_hash]
 my_vs_profile_lists = [my_vs_profile_list]
 
-create_virt_s(lb, myvs_list, options.netmask, my_vs_resource_list, my_vs_profile_lists)
+pp "myvs_list: #{myvs_list} \n"
+pp "my_vs_resource: #{my_vs_resource_list} \n"
+pp "my_vs_profile_list: #{my_vs_profile_list} \n"
+create_virt_s(lb, myvs_list, [options.netmask], my_vs_resource_list, my_vs_profile_lists)

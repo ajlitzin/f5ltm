@@ -15,6 +15,7 @@ class Optparser
       opts.separator "Specific options:"
       
       options.members = []
+      options.lb_method = ["LB_METHOD_ROUND_ROBIN"]
       
            
       opts.on( "-b", "--bigip IP", "BigIP IP address") do |bip|
@@ -50,7 +51,7 @@ def member_split(members)
   member_list = []
   members.each do |mem|
     address, port = mem.split(/:/, 2)
-    member_list << {address: address, port: port}
+    member_list << {'address' => address, 'port' => port}
   end
   member_list
 end
@@ -72,7 +73,7 @@ end
 lb = F5::LoadBalancer.new(options.bigip, :config_file => '../fixtures/config-andy.yaml', :connect_timeout => 10)
 
 mypool_names = [options.name]
-mylb_methods = [options.lb_method]
+mylb_methods = options.lb_method
 mymember_lists = [member_split(options.members)]
 
 create_pool(lb, mypool_names, mylb_methods, mymember_lists)
