@@ -31,14 +31,14 @@ class Optparser
       opts.on("--type [TEMPLATE TYPE]", "Template Type") do |type|
         options.template_type = type || "TTYPE_HTTP"
       end
-      opts.on("--parent_template PARENT TEMPLATE", "Parent Template to inherit from") do |parent|
+      opts.on("--parent_template [PARENT_TEMPLATE]", "Parent Template to inherit from") do |parent|
 	      options.parent_template = parent || "http"
       end
 	    opts.on("--interval [INTERVAL]", "How frequently the monitor instance of this template will run") do |int|
 	      options.interval = int || 5
       end
 	    opts.on("--timeout [TIMEOUT]", "The Number of seconds in which the node or service must respond to the monitor request") do |timeout|
-	      options.timeout = timeout
+	      options.timeout = timeout || 16
       end
 	    
 	    opts.on("--monitor_ip [MonitorIP]", "The destination IP of this monitor template") do |ip|
@@ -81,13 +81,14 @@ options = Optparser.parse(ARGV)
 # exit if required parameters are missing
 # this may need some work
 # maybe swap optparse for trollop?
-REQ_PARAMS = [:bigip, :name]
+REQ_PARAMS = [:bigip, :name, :parent_template]
 REQ_PARAMS.find do |p|
   Kernel.abort "Missing Argument: #{p}" unless options.respond_to?(p)
 end
 
 lb = F5::LoadBalancer.new(options.bigip, :config_file =>'../fixtures/config-andy.yaml', :connect_timeout => 10)
 
+pp options
 
 my_mon_template = MonitorTemplate.new(options.name, options.type)
 my_mon_template_list = [my_mon_template.to_hash]

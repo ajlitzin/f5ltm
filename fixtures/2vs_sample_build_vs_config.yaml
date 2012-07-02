@@ -1,14 +1,15 @@
 service1:
   monitor:
-    name: my_fqdn_alive
+    name: andy_ruby_fqdn_alive
     type: http
-    send: 'GET /dude HTTP/1.1\r\n Host: bigipalivecheck.sea1.com\r\n\r\n'
+    send: "GET /dude/iscoolandstuff"
     recv: 'Web Service is OK'
-       
+     
   pool:
-    name: my_pool_555
+    name: andy_ruby_pool_555
     lb_method: least_connections
     monitor_name: http
+    min_active_members: 2
     pool_members:
     -
       memberdef: 172.16.4.5:5555
@@ -19,51 +20,53 @@ service1:
     - 
       memberdef: 172.16.4.7:555
       priority: 0
-       
+     
   virtual_server:
-    name: andy_rad_test_vs_5556
+    name: andy_ruby_test_vs_5555
+    address: 10.1.94.55
+    port: 5555
+    protocol: ""
+    netmask: ""
+    type: ""
+    default_pool_name: andy_ruby_pool_555
+    profile_context:
+    profile_name: http
+    snat: automap
+    ssl_client_profile:
+        
+service2:
+  monitor:
+    name: andy_ruby_fqdn_alive2
+    type: http
+    send: "GET /dude/isNOTcoolandstuff"
+    recv: 'Web Service is OK'
+     
+  pool:
+    name: andy_ruby_pool_5556
+    lb_method: least_connections
+    monitor_name: http
+    min_active_members: 2
+    pool_members:
+    -
+      memberdef: 172.16.4.5:5556
+      priority: 2
+    -
+      memberdef: 172.16.4.6:5556
+      priority: 2
+    - 
+      memberdef: 172.16.4.7:5556
+      priority: 0
+     
+  virtual_server:
+    name: andy_ruby_test_vs_5556
     address: 10.1.94.55
     port: 5556
     protocol: ""
     netmask: ""
     type: ""
-    default_pool_name: my_pool_555
-    profile_context: ""
+    default_pool_name: andy_ruby_pool_5556
+    profile_context:
     profile_name: http
-    snat: ""
-    ssl_client_profile: ""
-	  
-service2:
-  monitor:
-    name: my_service2_fqdn_alive
-    type: http
-    send: 'GET /superman HTTP/1.1\r\n Host: bigipalivecheck.sea1.com\r\n\r\n'
-    recv: 'Web Service is OK'
-       
-  pool:
-    name: my_pool_7777
-    lb_method: least_connections
-    monitor_name: http
-    pool_members:
-    -
-      memberdef: 172.16.4.50:7777
-      priority: 2
-    -
-      memberdef: 172.16.4.60:6666
-      priority: 2
-    - 
-      memberdef: 172.16.4.70:6666
-      priority: 0
-       
-  virtual_server:
-    name: andy_crappy_test_vs_6665
-    address: 10.1.94.88
-    port: 5556
-    protocol: ""
-    netmask: ""
-    type: ""
-    default_pool_name: my_pool2_555
-    profile_context: ""
-    profile_name: http
-    snat: ""
-    ssl_client_profile: ""
+    snat: automap
+    ssl_client_profile:
+    

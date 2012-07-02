@@ -1,13 +1,14 @@
 monitor:
-  name: my_fqdn_alive
+  name: andy_ruby_fqdn_alive
   type: http
-  send: 'GET /dude HTTP/1.1\r\n Host: bigipalivecheck.sea1.com\r\n\r\n'
+  send: "GET /dude/iscoolandstuff"
   recv: 'Web Service is OK'
 	 
 pool:
-  name: andy_pool_555
+  name: andy_ruby_pool_555
   lb_method: least_connections
   monitor_name: http
+  min_active_members: 2
   pool_members:
   -
     memberdef: 172.16.4.5:5555
@@ -20,15 +21,15 @@ pool:
     priority: 0
    
 virtual_server:
-  name: andy_rad_test_vs_5556
+  name: andy_ruby_test_vs_5556
   address: 10.1.94.55
   port: 5556
   protocol: ""
   netmask: ""
   type: ""
-  default_pool_name: andy_pool_555
+  default_pool_name: andy_ruby_pool_555
   profile_context:
   profile_name: http
-  snat: ""
-  ssl_client_profile: ""
+  snat: automap
+  ssl_client_profile:
   
