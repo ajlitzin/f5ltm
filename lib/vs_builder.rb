@@ -89,9 +89,10 @@ if service_list.empty?
   # how to DRY this up?
   puts "service list is empty"
   ### creating pool
-  #debugger
+  pp "single service: #{vs_yaml_conf}"
+  exit
   member_list = create_member_list(vs_yaml_conf.pool["pool_members"])
-  #output = %x{ruby f5_pool_create.rb --name #{vs_yaml_conf.pool["name"]} #{member_list} --bigip 192.168.106.13}
+  output = %x{ruby f5_pool_create.rb --name #{vs_yaml_conf.pool["name"]} #{member_list} --bigip 192.168.106.13}
   
   ### update pool member priority
   vs_yaml_conf.pool["pool_members"].each do |pool_mem|
@@ -103,33 +104,78 @@ if service_list.empty?
   
   ## creating monitor template
   
-  #monoutput = %x{ruby f5_monitor_create_template.rb --bigip 192.168.106.13  --name #{vs_yaml_conf.monitor["name"]} --parent_template #{vs_yaml_conf.monitor["type"]} --interval #{vs_yaml_conf.monitor["interval"]} --timeout #{vs_yaml_conf.monitor["timeout"]}}
+  monoutput = %x{ruby f5_monitor_create_template.rb --bigip 192.168.106.13  --name #{vs_yaml_conf.monitor["name"]} --parent_template #{vs_yaml_conf.monitor["type"]} --interval #{vs_yaml_conf.monitor["interval"]} --timeout #{vs_yaml_conf.monitor["timeout"]}}
   
   ## set monitor send/receive strings
   ## assumes http/https monitor type
   
   send_string_suffix = vs_yaml_conf.monitor["send"].to_s.concat(' HTTP/1.1\\r\\nHost: bigipalive.theplatform.com\\r\\n\\r\\n')
   
-  #monoutput = %x{ruby f5_monitor_set_template_string_property.rb --bigip 192.168.106.13 --monitor_name #{vs_yaml_conf.monitor["name"]} --string_property_type "STYPE_SEND" --string_value "#{send_string_suffix}"}
+  monoutput = %x{ruby f5_monitor_set_template_string_property.rb --bigip 192.168.106.13 --monitor_name #{vs_yaml_conf.monitor["name"]} --string_property_type "STYPE_SEND" --string_value "#{send_string_suffix}"}
  
-  #monoutput = %x{ruby f5_monitor_set_template_string_property.rb --bigip 192.168.106.13 --monitor_name #{vs_yaml_conf.monitor["name"]} --string_property_type "STYPE_RECEIVE" --string_value "#{vs_yaml_conf.monitor["recv"]}"}
+  monoutput = %x{ruby f5_monitor_set_template_string_property.rb --bigip 192.168.106.13 --monitor_name #{vs_yaml_conf.monitor["name"]} --string_property_type "STYPE_RECEIVE" --string_value "#{vs_yaml_conf.monitor["recv"]}"}
 
   ### associate monitor template with pool
-  #monassoc_output = %x{ruby f5_pool_set_monitor_association.rb --bigip 192.168.106.13 --pool_name #{vs_yaml_conf.pool["name"]} --monitor_name #{vs_yaml_conf.monitor["name"]} }
+  monassoc_output = %x{ruby f5_pool_set_monitor_association.rb --bigip 192.168.106.13 --pool_name #{vs_yaml_conf.pool["name"]} --monitor_name #{vs_yaml_conf.monitor["name"]} }
   
   ### create the virtual server
-  #output = %x{ruby f5_vs_create.rb --bigip 192.168.106.13 --address #{vs_yaml_conf.virtual_server["address"].to_s}  --mask #{vs_yaml_conf.virtual_server["netmask"]} --name #{vs_yaml_conf.virtual_server["name"]} --port #{vs_yaml_conf.virtual_server["port"]} --protocol #{vs_yaml_conf.virtual_server["protocol"]} --resource_type #{vs_yaml_conf.virtual_server["resource_type"]} --pool_name #{vs_yaml_conf.virtual_server["default_pool_name"]} --profile_context #{vs_yaml_conf.virtual_server["profile_context"]}}
+  output = %x{ruby f5_vs_create.rb --bigip 192.168.106.13 --address #{vs_yaml_conf.virtual_server["address"].to_s}  --mask #{vs_yaml_conf.virtual_server["netmask"]} --name #{vs_yaml_conf.virtual_server["name"]} --port #{vs_yaml_conf.virtual_server["port"]} --protocol #{vs_yaml_conf.virtual_server["protocol"]} --resource_type #{vs_yaml_conf.virtual_server["resource_type"]} --pool_name #{vs_yaml_conf.virtual_server["default_pool_name"]} --profile_context #{vs_yaml_conf.virtual_server["profile_context"]}}
   
   ###### update VS settings ######
   ### add snat if necessary
   unless vs_yaml_conf.virtual_server["snat"].nil?
     output = %x{ruby f5_vs_set_snat_pool.rb --bigip 192.168.106.13 --vs_name #{vs_yaml_conf.virtual_server["name"]} --snat_pool_name #{vs_yaml_conf.virtual_server["snat"]} }
   end
-else
+else ### loop through each service and create vs/pool/monitor/etc
   puts "service list is NOT empty, #{service_list}"
-  service_list.each do
-    # loop through each service and create vs/pool/monitor/etc
+  
+  service_list.each do |service_num|
+    pp "vs_yaml #{vs_yaml_conf}"
+    pp "service num #{service_num}"
+    pp "service conf #{vs_yaml_conf.send(service_num)}"
+    
+    # create an array of objects.  there might be an easier way to do this,
+    # we get the ability to use "." notation
+    current_service_conf = OpenStruct.new(vs_yaml_conf.send(service_num))
+    pp "current_service #{current_service_conf}"
+    
+    ### creating pool
+    
+    member_list = create_member_list(current_service_conf.pool["pool_members"])
+    output = %x{ruby f5_pool_create.rb --name #{current_service_conf.pool["name"]} #{member_list} --bigip 192.168.106.13}
+    
+    ### update pool member priority
+    current_service_conf.pool["pool_members"].each do |pool_mem|
+      output = %x{ruby f5_poolmember_set_priority.rb --bigip 192.168.106.13 --name #{current_service_conf.pool["name"]} --member #{pool_mem["memberdef"]} --member_priority #{pool_mem["priority"]} }
+    end
+    
+    ### turn on PGA
+    output = %x{ruby f5_pool_set_min_active_members.rb --bigip 192.168.106.13 --pool_name #{current_service_conf.pool["name"]} --min_active_members #{current_service_conf.pool["min_active_members"]} }
+    
+    ## creating monitor template
+    
+    monoutput = %x{ruby f5_monitor_create_template.rb --bigip 192.168.106.13  --name #{current_service_conf.monitor["name"]} --parent_template #{current_service_conf.monitor["type"]} --interval #{current_service_conf.monitor["interval"]} --timeout #{current_service_conf.monitor["timeout"]}}
+    
+    ## set monitor send/receive strings
+    ## assumes http/https monitor type
+    
+    send_string_suffix = current_service_conf.monitor["send"].to_s.concat(' HTTP/1.1\\r\\nHost: bigipalive.theplatform.com\\r\\n\\r\\n')
+    
+    monoutput = %x{ruby f5_monitor_set_template_string_property.rb --bigip 192.168.106.13 --monitor_name #{current_service_conf.monitor["name"]} --string_property_type "STYPE_SEND" --string_value "#{send_string_suffix}"}
+   
+    monoutput = %x{ruby f5_monitor_set_template_string_property.rb --bigip 192.168.106.13 --monitor_name #{current_service_conf.monitor["name"]} --string_property_type "STYPE_RECEIVE" --string_value "#{current_service_conf.monitor["recv"]}"}
+
+    ### associate monitor template with pool
+    monassoc_output = %x{ruby f5_pool_set_monitor_association.rb --bigip 192.168.106.13 --pool_name #{current_service_conf.pool["name"]} --monitor_name #{current_service_conf.monitor["name"]} }
+    
+    ### create the virtual server
+    output = %x{ruby f5_vs_create.rb --bigip 192.168.106.13 --address #{current_service_conf.virtual_server["address"].to_s}  --mask #{current_service_conf.virtual_server["netmask"]} --name #{current_service_conf.virtual_server["name"]} --port #{current_service_conf.virtual_server["port"]} --protocol #{current_service_conf.virtual_server["protocol"]} --resource_type #{current_service_conf.virtual_server["resource_type"]} --pool_name #{current_service_conf.virtual_server["default_pool_name"]} --profile_context #{current_service_conf.virtual_server["profile_context"]}}
+    
+    ###### update VS settings ######
+    ### add snat if necessary
+    unless current_service_conf.virtual_server["snat"].nil?
+      output = %x{ruby f5_vs_set_snat_pool.rb --bigip 192.168.106.13 --vs_name #{current_service_conf.virtual_server["name"]} --snat_pool_name #{current_service_conf.virtual_server["snat"]} }
+    end
+      
   end
 end
-
-#pp vs_yaml_conf.service1
