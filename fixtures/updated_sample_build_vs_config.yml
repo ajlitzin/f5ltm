@@ -1,0 +1,40 @@
+main:
+  fqdn: andy_ruby_fqdn
+monitor:
+  name: andy_ruby_mon_test
+  type: http
+  send: "GET /dude/iscoolandstuff"
+  recv: 'Web Service is OK'
+	 
+pool:
+  name: ""
+  port: 5555
+  lb_method: least_connections
+  monitor_name: http
+  min_active_members: 2
+  pool_members:
+  -
+    memberdef: 172.16.4.5
+    priority: 2
+  -
+    memberdef: 172.16.4.6:7777
+    priority: 2
+  - 
+    memberdef: 172.16.4.79
+    priority: 0
+  -
+    memberdef: 172.16.4.81
+    priority: 0
+   
+virtual_server:
+  name:
+  address: 10.1.94.55
+  port: 5556
+  protocol: ""
+  netmask: ""
+  type: ""
+  default_pool_name:
+  profile_context:
+  profile_name: http
+  snat: automap
+  ssl_client_profile:
