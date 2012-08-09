@@ -15,8 +15,6 @@ module F5
 
       def initialize(lb, address)
         @lb, @address = lb, address
-		pp @lb
-		pp @address
         clear
       end
 

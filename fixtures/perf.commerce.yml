@@ -1,0 +1,265 @@
+service1:
+  monitor:
+    name: order.commerce.perf.corp.theplatform.com_alive
+    type: http
+    send: "GET /order/management/alive?schema=1.0"
+    recv: 'Web Service is OK'
+     
+  pool:
+    name: order.commerce.perf.corp.theplatform.com_10318
+    lb_method: least_connections
+    monitor_name: http
+    min_active_members: 2
+    pool_members:
+    -
+      memberdef: 192.168.76.66:10318
+      priority: 2
+    -
+      memberdef: 192.168.76.67:10318
+      priority: 2
+     
+  virtual_server:
+    name: order.commerce.perf.corp.theplatform.com_80
+    address: 192.168.95.61
+    port: 80
+    protocol: ""
+    netmask: ""
+    type: ""
+    default_pool_name: order.commerce.perf.corp.theplatform.com_10318
+    profile_context:
+    profile_name: http
+    snat: automap
+    ssl_client_profile:
+	
+service2:
+  monitor:
+    name: ledger.commerce.perf.corp.theplatform.com_alive
+    type: http
+    send: "GET /ledger/management/alive?schema=1.0"
+    recv: 'Web Service is OK'
+     
+  pool:
+    name: ledger.commerce.perf.corp.theplatform.com_10310
+    lb_method: least_connections
+    monitor_name: http
+    min_active_members: 2
+    pool_members:
+    -
+      memberdef: 192.168.76.68:10310
+      priority: 2
+    -
+      memberdef: 192.168.76.69:10310
+      priority: 2
+     
+  virtual_server:
+    name: ledger.commerce.perf.corp.theplatform.com_80
+    address: 192.168.95.62
+    port: 80
+    protocol: ""
+    netmask: ""
+    type: ""
+    default_pool_name: ledger.commerce.perf.corp.theplatform.com_10310
+    profile_context:
+    profile_name: http
+    snat: automap
+    ssl_client_profile:
+
+service3:
+  monitor:
+    name: address.commerce.perf.corp.theplatform.com_alive
+    type: http
+    send: "GET /address/management/alive"
+    recv: 'Web Service is OK'
+     
+  pool:
+    name: address.commerce.perf.corp.theplatform.com_10314
+    lb_method: least_connections
+    monitor_name: http
+    min_active_members: 2
+    pool_members:
+    -
+      memberdef: 192.168.76.70:10314
+      priority: 2
+    -
+      memberdef: 192.168.76.71:10314
+      priority: 2
+     
+  virtual_server:
+    name: address.commerce.perf.corp.theplatform.com_80
+    address: 192.168.95.63
+    port: 80
+    protocol: ""
+    netmask: ""
+    type: ""
+    default_pool_name: address.commerce.perf.corp.theplatform.com_10314
+    profile_context:
+    profile_name: http
+    snat: automap
+    ssl_client_profile:
+
+service4:
+  monitor:
+    name: payment.commerce.perf.corp.theplatform.com_alive
+    type: http
+    send: "GET /payment/management/alive?schema=1.0"
+    recv: 'Web Service is OK'
+     
+  pool:
+    name: payment.commerce.perf.corp.theplatform.com_10312
+    lb_method: least_connections
+    monitor_name: http
+    min_active_members: 2
+    pool_members:
+    -
+      memberdef: 192.168.76.72:10312
+      priority: 2
+    -
+      memberdef: 192.168.76.73:10312
+      priority: 2
+     
+  virtual_server:
+    name: payment.commerce.perf.corp.theplatform.com_80
+    address: 192.168.95.64
+    port: 80
+    protocol: ""
+    netmask: ""
+    type: ""
+    default_pool_name: payment.commerce.perf.corp.theplatform.com_10312
+    profile_context:
+    profile_name: http
+    snat: automap
+    ssl_client_profile:
+
+service5:
+  monitor:
+    name: fulfillment.commerce.perf.corp.theplatform.com_alive
+    type: http
+    send: "GET /fulfillment/management/alive?schema=1.0"
+    recv: 'Web Service is OK'
+     
+  pool:
+    name: fulfillment.commerce.perf.corp.theplatform.com_10308
+    lb_method: least_connections
+    monitor_name: http
+    min_active_members: 2
+    pool_members:
+    -
+      memberdef: 192.168.76.76:10308
+      priority: 2
+    -
+      memberdef: 192.168.76.77:10308
+      priority: 2
+     
+  virtual_server:
+    name: fulfillment.commerce.perf.corp.theplatform.com_80
+    address: 192.168.95.65
+    port: 80
+    protocol: ""
+    netmask: ""
+    type: ""
+    default_pool_name: fulfillment.commerce.perf.corp.theplatform.com_10308
+    profile_context:
+    profile_name: http
+    snat: automap
+    ssl_client_profile:
+
+service6:
+  monitor:
+    name: checkout.commerce.perf.corp.theplatform.com_alive
+    type: http
+    send: "GET /checkout/management/alive?schema=1.0"
+    recv: 'Web Service is OK'
+     
+  pool:
+    name: checkout.commerce.perf.corp.theplatform.com_10302
+    lb_method: least_connections
+    monitor_name: http
+    min_active_members: 2
+    pool_members:
+    -
+      memberdef: 192.168.76.78:10302
+      priority: 2
+    -
+      memberdef: 192.168.76.79:10302
+      priority: 2
+     
+  virtual_server:
+    name: checkout.commerce.perf.corp.theplatform.com_80
+    address: 192.168.95.66
+    port: 80
+    protocol: ""
+    netmask: ""
+    type: ""
+    default_pool_name: checkout.commerce.perf.corp.theplatform.com_10302
+    profile_context:
+    profile_name: http
+    snat: automap
+    ssl_client_profile:
+
+service7:
+  monitor:
+    name: storefront.commerce.perf.corp.theplatform.com_alive
+    type: http
+    send: "GET /storefront/management/alive"
+    recv: 'Web Service is OK'
+     
+  pool:
+    name: storefront.commerce.perf.corp.theplatform.com_10326
+    lb_method: least_connections
+    monitor_name: http
+    min_active_members: 2
+    pool_members:
+    -
+      memberdef: 192.168.76.80:10326
+      priority: 2
+    -
+      memberdef: 192.168.76.81:10326
+      priority: 2
+     
+  virtual_server:
+    name: storefront.commerce.perf.corp.theplatform.com_80
+    address: 192.168.95.67
+    port: 80
+    protocol: ""
+    netmask: ""
+    type: ""
+    default_pool_name: storefront.commerce.perf.corp.theplatform.com_10326
+    profile_context:
+    profile_name: http
+    snat: automap
+    ssl_client_profile:
+
+service8:
+  monitor:
+    name: admin.storefront.commerce.perf.corp.theplatform.com_alive
+    type: http
+    send: "GET /storefront.management/alive"
+    recv: 'Web Service is OK'
+     
+  pool:
+    name: admin.storefront.commerce.perf.corp.theplatform.com_10328
+    lb_method: least_connections
+    monitor_name: http
+    min_active_members: 2
+    pool_members:
+    -
+      memberdef: 192.168.76.80:10328
+      priority: 2
+    -
+      memberdef: 192.168.76.81:10328
+      priority: 2
+     
+  virtual_server:
+    name: admin.storefront.commerce.perf.corp.theplatform.com_80
+    address: 192.168.95.68
+    port: 80
+    protocol: ""
+    netmask: ""
+    type: ""
+    default_pool_name: admin.storefront.commerce.perf.corp.theplatform.com_10328
+    profile_context:
+    profile_name: http
+    snat: automap
+    ssl_client_profile:
+    
+    

@@ -1,0 +1,33 @@
+service7:
+  main:
+    fqdn: primary.master.mds.solr.perf.corp.theplatform.com
+  monitor:
+    name: rubyfakemon2
+    type: http
+    send: "GET /solr/assetType/admin/ping"
+    recv: '<str name=\"status\">OK</str>'
+     
+  pool:
+    name: 
+    port: 11006
+    lb_method: round_robin
+    monitor_name: http
+    min_active_members: 2
+    pool_members:
+    -
+      memberdef: 192.168.76.62
+      priority: 2
+     
+  virtual_server:
+    name:
+    address: 192.168.95.75
+    port: 80
+    protocol: ""
+    netmask: ""
+    type: ""
+    default_pool_name:
+    profile_context:
+    profile_name: http
+    snat: automap
+    ssl_client_profile:
+    

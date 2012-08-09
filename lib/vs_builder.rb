@@ -109,7 +109,8 @@ end
 
 if service_list.empty?
   # create vs/pool/monitor/etc for the single service defined
-  # how to DRY this up?
+  # how to DRY this up?  nearly same code is repeated
+  # in the else piece below
   ### creating pool
   pp "whole pool conf: #{vs_yaml_conf.pool}"
   pp "pool mem conf: #{vs_yaml_conf.pool["pool_members"]}"
