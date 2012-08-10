@@ -183,7 +183,7 @@ if service_list.empty?
   ###### update VS settings ######
   ### add snat if necessary
   unless vs_yaml_conf.virtual_server["snat"].nil?
-    output = %x{ruby -W0 f5_vs_set_snat_pool.rb --bigip 192.168.106.13 --vs_name #{vs_yaml_conf.virtual_server["name"]} --snat_pool_name #{vs_yaml_conf.virtual_server["snat"]} }
+    output = %x{ruby -W0 f5_vs_set_snat_pool.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs_name #{vs_yaml_conf.virtual_server["name"]} --snat_pool_name #{vs_yaml_conf.virtual_server["snat"]} }
   end
 else ### loop through each service and create vs/pool/monitor/etc
     
@@ -257,7 +257,7 @@ else ### loop through each service and create vs/pool/monitor/etc
     ### add snat if necessary
     unless current_service_conf.virtual_server["snat"].nil?
       pp "adding snat pool..."
-      output = %x{ruby -W0 f5_vs_set_snat_pool.rb --bigip 192.168.106.13 --vs_name #{current_service_conf.virtual_server["name"]} --snat_pool_name #{current_service_conf.virtual_server["snat"]} }
+      output = %x{ruby -W0 f5_vs_set_snat_pool.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs_name #{current_service_conf.virtual_server["name"]} --snat_pool_name #{current_service_conf.virtual_server["snat"]} }
     end
       
   end

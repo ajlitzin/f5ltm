@@ -19,6 +19,9 @@ class Optparser
       opts.on( "-b", "--bigip IP", "BigIP IP address") do |bip|
         options.bigip = bip
       end
+      opts.on( "--bigip_conn_conf F5 Connection Config", "BigIP IP connection config") do |bipconf|
+        options.bigip_conn_conf = bipconf
+      end
       opts.on("-n", "--vs_name VIRTUAL_SERVER_NAME", "Name of Virtual Server") do |name|
         options.vs_name = name
       end
@@ -50,12 +53,12 @@ options = Optparser.parse(ARGV)
 # exit if required parameters are missing
 # this may need some work
 # maybe swap optparse for trollop?
-REQ_PARAMS = [:bigip, :vs_name]
+REQ_PARAMS = [:bigip, :vs_name, :bigip_conn_conf]
 REQ_PARAMS.find do |p|
   Kernel.abort "Missing Argument: #{p}" unless options.respond_to?(p)
 end
 
-lb = F5::LoadBalancer.new(options.bigip, :config_file =>'../fixtures/config-andy.yaml', :connect_timeout => 10)
+lb = F5::LoadBalancer.new(options.bigip, :config_file => options.bigip_conn_conf, :connect_timeout => 10)
 
 if options.snat_pool_name.downcase.eql?("automap")
   vs_set_snat_automap(lb,[options.vs_name])
