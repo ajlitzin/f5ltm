@@ -16,9 +16,11 @@ class Optparser
       
       options.memberpriority = 0
       
-           
       opts.on( "-b", "--bigip IP", "BigIP IP address") do |bip|
         options.bigip = bip
+      end
+      opts.on( "--bigip_conn_conf F5 Connection Config", "BigIP IP connection config") do |bipconf|
+        options.bigip_conn_conf = bipconf
       end
       opts.on("-n", "--name POOL_NAME", "Name of Pool") do |name|
         options.name = name
@@ -67,12 +69,12 @@ options = Optparser.parse(ARGV)
 # exit if required parameters are missing
 # this may need some work
 # maybe swap optparse for trollop?
-REQ_PARAMS = [:bigip, :name, :member]
+REQ_PARAMS = [:bigip, :name, :member, :bigip_conn_conf]
 REQ_PARAMS.find do |p|
   Kernel.abort "Missing Argument: #{p}" unless options.respond_to?(p)
 end
 
-lb = F5::LoadBalancer.new(options.bigip, :config_file => '../fixtures/config-andy.yaml', :connect_timeout => 10)
+lb = F5::LoadBalancer.new(options.bigip, :config_file => options.bigip_conn_conf, :connect_timeout => 10)
 
 my_pool_names = [options.name]
 my_member = member_split(options.member)

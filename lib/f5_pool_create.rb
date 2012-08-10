@@ -17,7 +17,6 @@ class Optparser
       options.members = []
       options.lb_method = ["LB_METHOD_ROUND_ROBIN"]
       
-           
       opts.on( "-b", "--bigip IP", "BigIP IP address") do |bip|
         options.bigip = bip
       end

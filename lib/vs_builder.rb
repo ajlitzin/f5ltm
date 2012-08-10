@@ -42,6 +42,9 @@ class Optparser
       
       options.vsconf = "../fixtures/virtual_servers.yaml"
       
+      opts.on( "-b", "--bigip IP", "BigIP IP address") do |bip|
+        options.bigip = bip
+      end
       opts.on( "-f", "--config Config File", "YAML config file") do |file|
         options.vsconf = file || "../fixtures/virtual_servers.yaml"
       end
@@ -77,7 +80,7 @@ options = Optparser.parse(ARGV)
 # exit if required parameters are missing
 # this may need some work
 # maybe swap optparse for trollop?
-REQ_PARAMS = [:vsconf]
+REQ_PARAMS = [:vsconf, :bigip, :bigip_conn_conf]
 REQ_PARAMS.find do |p|
   Kernel.abort "Missing Argument: #{p}" unless options.respond_to?(p)
 end
@@ -114,9 +117,9 @@ if service_list.empty?
   # create vs/pool/monitor/etc for the single service defined
   # how to DRY this up?  nearly same code is repeated
   # in the else piece below
-  ### creating pool
-  pp "whole pool conf: #{vs_yaml_conf.pool}"
-  pp "pool mem conf: #{vs_yaml_conf.pool["pool_members"]}"
+  
+  #pp "whole pool conf: #{vs_yaml_conf.pool}"
+  #pp "pool mem conf: #{vs_yaml_conf.pool["pool_members"]}"
   
   vs_yaml_conf.pool["name"] = update_object_name(vs_yaml_conf.pool["name"].to_s, vs_yaml_conf.pool["port"], vs_yaml_conf.main["fqdn"].to_s)
     
@@ -133,13 +136,14 @@ if service_list.empty?
   end
     
   member_flag_list = create_member_flag_list(member_list)
-  pp "creating pool..."
-  output = %x{ruby -W0 f5_pool_create.rb --name #{vs_yaml_conf.pool["name"]} #{member_flag_list} --bigip 192.168.106.13 --bigip_conn_conf #{options.bigip_conn_conf}}
+  ### creating pool
+  pp "creating pool #{vs_yaml_conf.pool["name"]}..."
+  output = %x{ruby -W0 f5_pool_create.rb --name #{vs_yaml_conf.pool["name"]} #{member_flag_list} --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf}}
   
   ### update pool member priority
   pp "updating pool member priorities..."
   vs_yaml_conf.pool["pool_members"].each do |pool_mem|
-    output = %x{ruby -W0 f5_poolmember_set_priority.rb --bigip 192.168.106.13 --name #{vs_yaml_conf.pool["name"]} --member #{pool_mem["memberdef"]} --member_priority #{pool_mem["priority"]} }
+    output = %x{ruby -W0 f5_poolmember_set_priority.rb --bigip 192.168.106.13 --bigip_conn_conf #{options.bigip_conn_conf} --name #{vs_yaml_conf.pool["name"]} --member #{pool_mem["memberdef"]} --member_priority #{pool_mem["priority"]} }
   end
   
   ### turn on PGA
@@ -184,8 +188,7 @@ else ### loop through each service and create vs/pool/monitor/etc
     # we get the ability to use "." notation
     current_service_conf = OpenStruct.new(vs_yaml_conf.send(service_num))
     
-    ### creating pool
-    pp "creating pool..."
+    
     current_service_conf.pool["name"] = update_object_name(current_service_conf.pool["name"].to_s, current_service_conf.pool["port"], current_service_conf.main["fqdn"].to_s)
     
     member_list = create_member_array(current_service_conf.pool["pool_members"])
@@ -200,14 +203,15 @@ else ### loop through each service and create vs/pool/monitor/etc
         end
       end
     end
-  
-    output = %x{ruby -W0 f5_pool_create.rb --name #{current_service_conf.pool["name"]} #{member_flag_list} --bigip 192.168.106.13 --bigip_conn_conf #{options.bigip_conn_conf}}
+    ### creating pool
+    pp "creating pool #{current_service_conf.pool["name"].to_s}..."
+    output = %x{ruby -W0 f5_pool_create.rb --name #{current_service_conf.pool["name"]} #{member_flag_list} --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf}}
     
     ### update pool member priority
     pp "updating pool member priorities"
     
     current_service_conf.pool["pool_members"].each do |pool_mem|
-      output = %x{ruby -W0 f5_poolmember_set_priority.rb --bigip 192.168.106.13 --name #{current_service_conf.pool["name"]} --member #{pool_mem["memberdef"]} --member_priority #{pool_mem["priority"]} }
+      output = %x{ruby -W0 f5_poolmember_set_priority.rb --bigip 192.168.106.13 --bigip_conn_conf #{options.bigip_conn_conf} --name #{current_service_conf.pool["name"]} --member #{pool_mem["memberdef"]} --member_priority #{pool_mem["priority"]} }
     end
     
     ### turn on PGA
