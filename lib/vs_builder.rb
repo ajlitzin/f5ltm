@@ -143,7 +143,7 @@ if service_list.empty?
   ### update pool member priority
   pp "updating pool member priorities..."
   vs_yaml_conf.pool["pool_members"].each do |pool_mem|
-    output = %x{ruby -W0 f5_poolmember_set_priority.rb --bigip 192.168.106.13 --bigip_conn_conf #{options.bigip_conn_conf} --name #{vs_yaml_conf.pool["name"]} --member #{pool_mem["memberdef"]} --member_priority #{pool_mem["priority"]} }
+    output = %x{ruby -W0 f5_poolmember_set_priority.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --name #{vs_yaml_conf.pool["name"]} --member #{pool_mem["memberdef"]} --member_priority #{pool_mem["priority"]} }
   end
   
   ### turn on PGA
@@ -216,7 +216,7 @@ else ### loop through each service and create vs/pool/monitor/etc
     pp "updating pool member priorities"
     
     current_service_conf.pool["pool_members"].each do |pool_mem|
-      output = %x{ruby -W0 f5_poolmember_set_priority.rb --bigip 192.168.106.13 --bigip_conn_conf #{options.bigip_conn_conf} --name #{current_service_conf.pool["name"]} --member #{pool_mem["memberdef"]} --member_priority #{pool_mem["priority"]} }
+      output = %x{ruby -W0 f5_poolmember_set_priority.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --name #{current_service_conf.pool["name"]} --member #{pool_mem["memberdef"]} --member_priority #{pool_mem["priority"]} }
     end
     
     ### turn on PGA
