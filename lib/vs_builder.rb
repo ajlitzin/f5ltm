@@ -150,19 +150,22 @@ if service_list.empty?
   output = %x{ruby -W0 f5_pool_set_min_active_members.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --pool_name #{vs_yaml_conf.pool["name"]} --min_active_members #{vs_yaml_conf.pool["min_active_members"]} }
   
   ## creating monitor template
-  pp "creating monitor template..."
+  
   vs_yaml_conf.monitor["name"] = update_object_name(vs_yaml_conf.monitor["name"].to_s, "alive", vs_yaml_conf.main["fqdn"].to_s)
   
-  monoutput = %x{ruby -W0 f5_monitor_create_template.rb --bigip 192.168.106.13 --bigip_conn_conf #{options.bigip_conn_conf} --name #{vs_yaml_conf.monitor["name"]} --parent_template #{vs_yaml_conf.monitor["type"]} --interval #{vs_yaml_conf.monitor["interval"]} --timeout #{vs_yaml_conf.monitor["timeout"]}}
+  pp "creating monitor template #{vs_yaml_conf.monitor["name"]}..."
+  monoutput = %x{ruby -W0 f5_monitor_create_template.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --name #{vs_yaml_conf.monitor["name"]} --parent_template #{vs_yaml_conf.monitor["type"]} --interval #{vs_yaml_conf.monitor["interval"]} --timeout #{vs_yaml_conf.monitor["timeout"]}}
   
   ## set monitor send/receive strings
   ## assumes http/https monitor type
   
   send_string_suffix = vs_yaml_conf.monitor["send"].to_s.concat(' HTTP/1.1\\r\\nHost: bigipalive.theplatform.com\\r\\n\\r\\n')
   
-  monoutput = %x{ruby -W0 f5_monitor_set_template_string_property.rb --bigip 192.168.106.13 --monitor_name #{vs_yaml_conf.monitor["name"]} --string_property_type "STYPE_SEND" --string_value "#{send_string_suffix}"}
+  # set send string
+  monoutput = %x{ruby -W0 f5_monitor_set_template_string_property.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --monitor_name #{vs_yaml_conf.monitor["name"]} --string_property_type "STYPE_SEND" --string_value "#{send_string_suffix}"}
  
-  monoutput = %x{ruby -W0 f5_monitor_set_template_string_property.rb --bigip 192.168.106.13 --monitor_name #{vs_yaml_conf.monitor["name"]} --string_property_type "STYPE_RECEIVE" --string_value "#{vs_yaml_conf.monitor["recv"]}"}
+ # set receive string
+  monoutput = %x{ruby -W0 f5_monitor_set_template_string_property.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --monitor_name #{vs_yaml_conf.monitor["name"]} --string_property_type "STYPE_RECEIVE" --string_value "#{vs_yaml_conf.monitor["recv"]}"}
 
   ### associate monitor template with pool
   monassoc_output = %x{ruby -W0 f5_pool_set_monitor_association.rb --bigip 192.168.106.13 --pool_name #{vs_yaml_conf.pool["name"]} --monitor_name #{vs_yaml_conf.monitor["name"]} }
@@ -219,10 +222,11 @@ else ### loop through each service and create vs/pool/monitor/etc
     output = %x{ruby -W0 f5_pool_set_min_active_members.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --pool_name #{current_service_conf.pool["name"]} --min_active_members #{current_service_conf.pool["min_active_members"]} }
     
     ## creating monitor template
-    pp "creating monitor template..."
+    
     current_service_conf.monitor["name"] = update_object_name(current_service_conf.monitor["name"].to_s, "alive", current_service_conf.main["fqdn"].to_s)
     
-    monoutput = %x{ruby -W0 f5_monitor_create_template.rb --bigip 192.168.106.13  --bigip_conn_conf #{options.bigip_conn_conf} --name #{current_service_conf.monitor["name"]} --parent_template #{current_service_conf.monitor["type"]} --interval #{current_service_conf.monitor["interval"]} --timeout #{current_service_conf.monitor["timeout"]}}
+    pp "creating monitor template #{current_service_conf.monitor["name"]}..."
+    monoutput = %x{ruby -W0 f5_monitor_create_template.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --name #{current_service_conf.monitor["name"]} --parent_template #{current_service_conf.monitor["type"]} --interval #{current_service_conf.monitor["interval"]} --timeout #{current_service_conf.monitor["timeout"]}}
     
     ## set monitor send/receive strings
     ## assumes http/https monitor type
@@ -230,9 +234,9 @@ else ### loop through each service and create vs/pool/monitor/etc
     
     send_string_suffix = current_service_conf.monitor["send"].to_s.concat(' HTTP/1.1\\r\\nHost: bigipalive.theplatform.com\\r\\n\\r\\n')
     
-    monoutput = %x{ruby -W0 f5_monitor_set_template_string_property.rb --bigip 192.168.106.13 --monitor_name #{current_service_conf.monitor["name"]} --string_property_type "STYPE_SEND" --string_value "#{send_string_suffix}"}
+    monoutput = %x{ruby -W0 f5_monitor_set_template_string_property.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --monitor_name #{current_service_conf.monitor["name"]} --string_property_type "STYPE_SEND" --string_value "#{send_string_suffix}"}
    
-    monoutput = %x{ruby -W0 f5_monitor_set_template_string_property.rb --bigip 192.168.106.13 --monitor_name #{current_service_conf.monitor["name"]} --string_property_type "STYPE_RECEIVE" --string_value "#{current_service_conf.monitor["recv"]}"}
+    monoutput = %x{ruby -W0 f5_monitor_set_template_string_property.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --monitor_name #{current_service_conf.monitor["name"]} --string_property_type "STYPE_RECEIVE" --string_value "#{current_service_conf.monitor["recv"]}"}
 
     ### associate monitor template with pool
     pp "associating monitor with pool..."
