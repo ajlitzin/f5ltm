@@ -42,9 +42,12 @@ class Optparser
       
       options.vsconf = "../fixtures/virtual_servers.yaml"
       
-           
       opts.on( "-f", "--config Config File", "YAML config file") do |file|
         options.vsconf = file || "../fixtures/virtual_servers.yaml"
+      end
+      
+      opts.on( "--bigip_conn_conf BigIP Connection Config File", "BigIP Connection Config File") do |bipcfile|
+        options.bigip_conn_conf = bipcfile || "../private-fixtures/bigipconconf.yml"
       end
       
       opts.on_tail("-h", "--help", "Show this message") do
@@ -146,7 +149,7 @@ if service_list.empty?
   pp "creating monitor template..."
   vs_yaml_conf.monitor["name"] = update_object_name(vs_yaml_conf.monitor["name"].to_s, "alive", vs_yaml_conf.main["fqdn"].to_s)
   
-  monoutput = %x{ruby -W0 f5_monitor_create_template.rb --bigip 192.168.106.13  --name #{vs_yaml_conf.monitor["name"]} --parent_template #{vs_yaml_conf.monitor["type"]} --interval #{vs_yaml_conf.monitor["interval"]} --timeout #{vs_yaml_conf.monitor["timeout"]}}
+  monoutput = %x{ruby -W0 f5_monitor_create_template.rb --bigip 192.168.106.13  --bigip_conn_conf #{options.bigip_conn_conf} --name #{vs_yaml_conf.monitor["name"]} --parent_template #{vs_yaml_conf.monitor["type"]} --interval #{vs_yaml_conf.monitor["interval"]} --timeout #{vs_yaml_conf.monitor["timeout"]}}
   
   ## set monitor send/receive strings
   ## assumes http/https monitor type
@@ -215,7 +218,7 @@ else ### loop through each service and create vs/pool/monitor/etc
     pp "creating monitor template..."
     current_service_conf.monitor["name"] = update_object_name(current_service_conf.monitor["name"].to_s, "alive", current_service_conf.main["fqdn"].to_s)
     
-    monoutput = %x{ruby -W0 f5_monitor_create_template.rb --bigip 192.168.106.13  --name #{current_service_conf.monitor["name"]} --parent_template #{current_service_conf.monitor["type"]} --interval #{current_service_conf.monitor["interval"]} --timeout #{current_service_conf.monitor["timeout"]}}
+    monoutput = %x{ruby -W0 f5_monitor_create_template.rb --bigip 192.168.106.13  --bigip_conn_conf #{options.bigip_conn_conf} --name #{current_service_conf.monitor["name"]} --parent_template #{current_service_conf.monitor["type"]} --interval #{current_service_conf.monitor["interval"]} --timeout #{current_service_conf.monitor["timeout"]}}
     
     ## set monitor send/receive strings
     ## assumes http/https monitor type

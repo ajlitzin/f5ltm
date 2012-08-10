@@ -1,6 +1,6 @@
 service1:
   main:
-    fqdn: andy_ruby_fqdn
+    fqdn: andy_ruby_fqdn_mult1
   monitor:
     name: andy_ruby_mon_test
     type: http
@@ -42,7 +42,7 @@ service1:
 
 service2:
   main:
-    fqdn: andy_ruby_fqdn2
+    fqdn: andy_ruby_fqdn_mult22
   monitor:
     name: 
     type: http
