@@ -17,6 +17,9 @@ class Optparser
       opts.on( "-b", "--bigip IP", "BigIP IP address") do |bip|
         options.bigip = bip
       end
+      opts.on( "--bigip_conn_conf F5 Connection Config", "BigIP IP connection config") do |bipconf|
+        options.bigip_conn_conf = bipconf
+      end
       opts.on("-n", "--name VS_NAME", "Name of virtual server") do |name|
         options.name = name
       end
@@ -44,12 +47,12 @@ end
 options = Optparser.parse(ARGV)
 
 
-REQ_PARAMS = [:bigip, :name, :profile_name]
+REQ_PARAMS = [:bigip, :name, :profile_name, :bigip_conn_conf]
 REQ_PARAMS.find do |p|
   Kernel.abort "Missing Argument: #{p}" unless options.respond_to?(p)
 end
 
-lb = F5::LoadBalancer.new(options.bigip, :config_file => '../fixtures/config-andy.yaml', :connect_timeout => 10)
+lb = F5::LoadBalancer.new(options.bigip, :config_file =>  options.bigip_conn_conf, :connect_timeout => 10)
 
 
 Vs_Profile = Struct.new(:profile_context, :profile_name) do
