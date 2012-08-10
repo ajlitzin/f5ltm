@@ -147,7 +147,7 @@ if service_list.empty?
   end
   
   ### turn on PGA
-  output = %x{ruby -W0 f5_pool_set_min_active_members.rb --bigip 192.168.106.13 --pool_name #{vs_yaml_conf.pool["name"]} --min_active_members #{vs_yaml_conf.pool["min_active_members"]} }
+  output = %x{ruby -W0 f5_pool_set_min_active_members.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --pool_name #{vs_yaml_conf.pool["name"]} --min_active_members #{vs_yaml_conf.pool["min_active_members"]} }
   
   ## creating monitor template
   pp "creating monitor template..."
@@ -216,7 +216,7 @@ else ### loop through each service and create vs/pool/monitor/etc
     
     ### turn on PGA
     pp "turning on PGA"
-    output = %x{ruby -W0 f5_pool_set_min_active_members.rb --bigip 192.168.106.13 --pool_name #{current_service_conf.pool["name"]} --min_active_members #{current_service_conf.pool["min_active_members"]} }
+    output = %x{ruby -W0 f5_pool_set_min_active_members.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --pool_name #{current_service_conf.pool["name"]} --min_active_members #{current_service_conf.pool["min_active_members"]} }
     
     ## creating monitor template
     pp "creating monitor template..."
