@@ -11,7 +11,7 @@ service1:
     name: ""
     port: 5555
     lb_method: least_connections
-    monitor_name: http
+    monitor_name:
     min_active_members: 2
     pool_members:
     -
@@ -42,7 +42,7 @@ service1:
 
 service2:
   main:
-    fqdn: andy_ruby_fqdn_mult22
+    fqdn: andy_ruby_fqdn_mult2
   monitor:
     name: 
     type: http
@@ -53,7 +53,7 @@ service2:
     name: 
     port: 8888
     lb_method: least_connections
-    monitor_name: http
+    monitor_name:
     min_active_members: 2
     pool_members:
     -

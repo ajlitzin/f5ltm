@@ -10,7 +10,7 @@ pool:
   name: ""
   port: 5555
   lb_method: least_connections
-  monitor_name: http
+  monitor_name:
   min_active_members: 2
   pool_members:
   -

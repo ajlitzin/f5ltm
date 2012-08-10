@@ -36,7 +36,7 @@ class Optparser
 
     opts = OptionParser.new do |opts|
       
-      opts.banner = "Usage: f5_pool_create.rb [options]"
+      opts.banner = "Usage: vs_builder.rb [options]"
       opts.separator ""
       opts.separator "Specific options:"
       
@@ -134,7 +134,7 @@ if service_list.empty?
     
   member_flag_list = create_member_flag_list(member_list)
   pp "creating pool..."
-  output = %x{ruby -W0 f5_pool_create.rb --name #{vs_yaml_conf.pool["name"]} #{member_flag_list} --bigip 192.168.106.13}
+  output = %x{ruby -W0 f5_pool_create.rb --name #{vs_yaml_conf.pool["name"]} #{member_flag_list} --bigip 192.168.106.13 --bigip_conn_conf #{options.bigip_conn_conf}}
   
   ### update pool member priority
   pp "updating pool member priorities..."
@@ -149,7 +149,7 @@ if service_list.empty?
   pp "creating monitor template..."
   vs_yaml_conf.monitor["name"] = update_object_name(vs_yaml_conf.monitor["name"].to_s, "alive", vs_yaml_conf.main["fqdn"].to_s)
   
-  monoutput = %x{ruby -W0 f5_monitor_create_template.rb --bigip 192.168.106.13  --bigip_conn_conf #{options.bigip_conn_conf} --name #{vs_yaml_conf.monitor["name"]} --parent_template #{vs_yaml_conf.monitor["type"]} --interval #{vs_yaml_conf.monitor["interval"]} --timeout #{vs_yaml_conf.monitor["timeout"]}}
+  monoutput = %x{ruby -W0 f5_monitor_create_template.rb --bigip 192.168.106.13 --bigip_conn_conf #{options.bigip_conn_conf} --name #{vs_yaml_conf.monitor["name"]} --parent_template #{vs_yaml_conf.monitor["type"]} --interval #{vs_yaml_conf.monitor["interval"]} --timeout #{vs_yaml_conf.monitor["timeout"]}}
   
   ## set monitor send/receive strings
   ## assumes http/https monitor type
@@ -201,7 +201,7 @@ else ### loop through each service and create vs/pool/monitor/etc
       end
     end
   
-    output = %x{ruby -W0 f5_pool_create.rb --name #{current_service_conf.pool["name"]} #{member_flag_list} --bigip 192.168.106.13}
+    output = %x{ruby -W0 f5_pool_create.rb --name #{current_service_conf.pool["name"]} #{member_flag_list} --bigip 192.168.106.13 --bigip_conn_conf #{options.bigip_conn_conf}}
     
     ### update pool member priority
     pp "updating pool member priorities"
