@@ -168,7 +168,8 @@ if service_list.empty?
   monoutput = %x{ruby -W0 f5_monitor_set_template_string_property.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --monitor_name #{vs_yaml_conf.monitor["name"]} --string_property_type "STYPE_RECEIVE" --string_value "#{vs_yaml_conf.monitor["recv"]}"}
 
   ### associate monitor template with pool
-  monassoc_output = %x{ruby -W0 f5_pool_set_monitor_association.rb --bigip 192.168.106.13 --pool_name #{vs_yaml_conf.pool["name"]} --monitor_name #{vs_yaml_conf.monitor["name"]} }
+  pp "associating monitor with pool"
+  monassoc_output = %x{ruby -W0 f5_pool_set_monitor_association.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --pool_name #{vs_yaml_conf.pool["name"]} --monitor_name #{vs_yaml_conf.monitor["name"]} }
   
   ### create the virtual server
   pp "creating virtual server..."
@@ -240,7 +241,7 @@ else ### loop through each service and create vs/pool/monitor/etc
 
     ### associate monitor template with pool
     pp "associating monitor with pool..."
-    monassoc_output = %x{ruby -W0 f5_pool_set_monitor_association.rb --bigip 192.168.106.13 --pool_name #{current_service_conf.pool["name"]} --monitor_name #{current_service_conf.monitor["name"]} }
+    monassoc_output = %x{ruby -W0 f5_pool_set_monitor_association.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --pool_name #{current_service_conf.pool["name"]} --monitor_name #{current_service_conf.monitor["name"]} }
     
     ### create the virtual server
     pp "creating virtual server..."
