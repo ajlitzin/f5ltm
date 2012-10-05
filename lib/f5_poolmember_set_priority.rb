@@ -1,7 +1,6 @@
 require './f5'
 require 'optparse'
 require 'pp'
-require 'ruby-debug'
 require 'ostruct'
 
 class Optparser
@@ -60,7 +59,6 @@ def member_split(member)
 end
 
 def poolmember_set_priority(lb, pool_names, priorities)
-  #debugger
   lb.icontrol.locallb.pool_member.set_priority(pool_names, priorities)
 end
 # get command line options

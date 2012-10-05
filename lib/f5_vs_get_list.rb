@@ -1,7 +1,6 @@
 require './f5'
 require 'optparse'
 require 'pp'
-require 'ruby-debug'
 require 'ostruct'
 
 class Optparser
@@ -32,7 +31,6 @@ end #class Optparser
 
 
 def get_vs_list(lb)
-  #debugger
   lb.icontrol.locallb.virtual_server.get_list
 end
 

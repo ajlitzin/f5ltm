@@ -1,7 +1,6 @@
 require './f5'
 require 'optparse'
 require 'pp'
-require 'ruby-debug'
 require 'ostruct'
 
 class Optparser

@@ -28,7 +28,6 @@ require 'yaml'
 require 'ostruct'
 require 'optparse'
 require 'pp'
-require 'ruby-debug'
 
 class Optparser
   def self.parse(args)

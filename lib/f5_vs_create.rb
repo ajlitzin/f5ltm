@@ -1,7 +1,6 @@
 require './f5'
 require 'optparse'
 require 'pp'
-require 'ruby-debug'
 require 'ostruct'
 
 class Optparser
@@ -84,7 +83,6 @@ VirtualServerProfile = Struct.new(:profile_context, :profile_name) do
 end
 
 def create_virt_s(lb, vs_def, vs_wildmask, vs_resource, vs_profiles)
-  #debugger
   lb.icontrol.locallb.virtual_server.create(vs_def,vs_wildmask,vs_resource,vs_profiles)
 end
 

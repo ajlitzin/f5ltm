@@ -1,7 +1,6 @@
 require './f5'
 require 'optparse'
 require 'pp'
-require 'ruby-debug'
 
 def set_virt_default_pool(lb, vs_name, pool_name)
   lb.icontrol.locallb.virtual_server.set_default_pool_name([vs_name],[pool_name])

@@ -1,7 +1,6 @@
 require './f5'
 require 'optparse'
 require 'pp'
-require 'ruby-debug'
 require 'ostruct'
 
 class Optparser
@@ -58,7 +57,6 @@ def member_split(members)
   member_list
 end
 def create_pool(lb, pool_names, lb_methods, members)
-  #debugger
   lb.icontrol.locallb.pool.create(pool_names, lb_methods, members)
 end
 # get command line options
