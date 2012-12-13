@@ -56,6 +56,11 @@ vs_list = [options.name]
 
 # set up to loop through an array of vs names
 # but currentl only accepts single vs name via cmd line
+
+## extra code in here from when i used this to figure out which
+## existing lab vips didn't have an http profile attached to them
+## so i could then apply one to get X-Forwarded-For working
+my_profiles =[]
 non_http_vs_list =[]
 has_http = false
 vs_list.each do |cur_vs|
@@ -74,8 +79,8 @@ vs_list.each do |cur_vs|
   end
   has_http = false
 end
-
-pp non_http_vs_list
+pp my_profiles
+#pp non_http_vs_list
 # 5.times {pp "---------------"}
 # pp "count of all vs #{vs_list.count}"
 # pp "count of dupe vs w/o http #{non_http_vs_list.count}"

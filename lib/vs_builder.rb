@@ -19,7 +19,7 @@
 ## vlans
 ## connection mirroring (only for DB LB)
 ## bind irule (lowest priority)
-
+# set mirrored enabled state
 ## other ideas-
 ### decouple command line from methods.  could allow easier direct use of methods.
 ### most obvious in setting pool member priority
@@ -148,24 +148,29 @@ if service_list.empty?
   ### turn on PGA
   output = %x{ruby -W0 f5_pool_set_min_active_members.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --pool_name #{vs_yaml_conf.pool["name"]} --min_active_members #{vs_yaml_conf.pool["min_active_members"]} }
   
+  ### set action on service down
+  pp "setting pool action on service down"
+  output = %x{ruby -W0 f5_pool_set_action_on_service_down.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --pool_name #{vs_yaml_conf.pool["name"]} --action #{vs_yaml_conf.pool["action_on_service_down"]} }
+  
   ## creating monitor template
+  ## dbs only use tcp monitor, probably a more elegant way to handle this
+  unless vs_yaml_conf.main["vip_type"].eql? "db"
+    vs_yaml_conf.monitor["name"] = update_object_name(vs_yaml_conf.monitor["name"].to_s, "alive", vs_yaml_conf.main["fqdn"].to_s)
   
-  vs_yaml_conf.monitor["name"] = update_object_name(vs_yaml_conf.monitor["name"].to_s, "alive", vs_yaml_conf.main["fqdn"].to_s)
+    pp "creating monitor template #{vs_yaml_conf.monitor["name"]}..."
+    monoutput = %x{ruby -W0 f5_monitor_create_template.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --name #{vs_yaml_conf.monitor["name"]} --parent_template #{vs_yaml_conf.monitor["type"]} --interval #{vs_yaml_conf.monitor["interval"]} --timeout #{vs_yaml_conf.monitor["timeout"]}}
   
-  pp "creating monitor template #{vs_yaml_conf.monitor["name"]}..."
-  monoutput = %x{ruby -W0 f5_monitor_create_template.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --name #{vs_yaml_conf.monitor["name"]} --parent_template #{vs_yaml_conf.monitor["type"]} --interval #{vs_yaml_conf.monitor["interval"]} --timeout #{vs_yaml_conf.monitor["timeout"]}}
+    ## set monitor send/receive strings
+    ## assumes http/https monitor type
   
-  ## set monitor send/receive strings
-  ## assumes http/https monitor type
+    send_string_suffix = vs_yaml_conf.monitor["send"].to_s.concat(' HTTP/1.1\\r\\nHost: bigipalive.theplatform.com\\r\\n\\r\\n')
   
-  send_string_suffix = vs_yaml_conf.monitor["send"].to_s.concat(' HTTP/1.1\\r\\nHost: bigipalive.theplatform.com\\r\\n\\r\\n')
-  
-  # set send string
-  monoutput = %x{ruby -W0 f5_monitor_set_template_string_property.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --monitor_name #{vs_yaml_conf.monitor["name"]} --string_property_type "STYPE_SEND" --string_value "#{send_string_suffix}"}
+    # set send string
+    monoutput = %x{ruby -W0 f5_monitor_set_template_string_property.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --monitor_name #{vs_yaml_conf.monitor["name"]} --string_property_type "STYPE_SEND" --string_value "#{send_string_suffix}"}
  
- # set receive string
-  monoutput = %x{ruby -W0 f5_monitor_set_template_string_property.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --monitor_name #{vs_yaml_conf.monitor["name"]} --string_property_type "STYPE_RECEIVE" --string_value "#{vs_yaml_conf.monitor["recv"]}"}
-
+   # set receive string
+    monoutput = %x{ruby -W0 f5_monitor_set_template_string_property.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --monitor_name #{vs_yaml_conf.monitor["name"]} --string_property_type "STYPE_RECEIVE" --string_value "#{vs_yaml_conf.monitor["recv"]}"}
+  end
   ### associate monitor template with pool
   pp "associating monitor with pool"
   monassoc_output = %x{ruby -W0 f5_pool_set_monitor_association.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --pool_name #{vs_yaml_conf.pool["name"]} --monitor_name #{vs_yaml_conf.monitor["name"]} }
@@ -177,13 +182,29 @@ if service_list.empty?
   vs_yaml_conf.virtual_server["default_pool_name"] = update_object_name(vs_yaml_conf.virtual_server["default_pool_name"].to_s, vs_yaml_conf.pool["port"], vs_yaml_conf.main["fqdn"].to_s)
   
   pp "creating virtual server #{vs_yaml_conf.virtual_server["name"]}..."
-  output = %x{ruby -W0 f5_vs_create.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --address #{vs_yaml_conf.virtual_server["address"].to_s}  --mask #{vs_yaml_conf.virtual_server["netmask"]} --name #{vs_yaml_conf.virtual_server["name"]} --port #{vs_yaml_conf.virtual_server["port"]} --protocol #{vs_yaml_conf.virtual_server["protocol"]} --resource_type #{vs_yaml_conf.virtual_server["resource_type"]} --pool_name #{vs_yaml_conf.virtual_server["default_pool_name"]} --profile_context #{vs_yaml_conf.virtual_server["profile_context"]}}
+  pp "vs resource type:#{vs_yaml_conf.virtual_server["resource_type"]} --pool_name #{vs_yaml_conf.virtual_server["default_pool_name"]} --profile_context #{vs_yaml_conf.virtual_server["profile_context"]}}"
+  
+  output = %x{ruby -W0 f5_vs_create.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --address #{vs_yaml_conf.virtual_server["address"].to_s}  --mask #{vs_yaml_conf.virtual_server["netmask"]} --name #{vs_yaml_conf.virtual_server["name"]} --port #{vs_yaml_conf.virtual_server["port"]} --protocol #{vs_yaml_conf.virtual_server["protocol"]} --resource_type #{vs_yaml_conf.virtual_server["resource_type"]} --pool_name #{vs_yaml_conf.virtual_server["default_pool_name"]} --profile_name #{vs_yaml_conf.virtual_server["profile_name"]}}
+# not sending this in stopped the error, but it still didn't link the vs to the pool or use the right profile for DBs   
+   # --profile_context #{vs_yaml_conf.virtual_server["profile_context"]}}
   
   ###### update VS settings ######
   ### add snat if necessary
   unless vs_yaml_conf.virtual_server["snat"].nil?
     output = %x{ruby -W0 f5_vs_set_snat_pool.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs_name #{vs_yaml_conf.virtual_server["name"]} --snat_pool_name #{vs_yaml_conf.virtual_server["snat"]} }
   end
+  
+  ### set mirrored state- should only be enabled for DBs
+  unless vs_yaml_conf.virtual_server["mirrored_state"].empty?
+    pp "setting mirrored enabled state"
+    output = %x{ruby -W0 f5_vs_set_connection_mirror_state.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs_name #{vs_yaml_conf.virtual_server["name"]} --mirrored_state #{vs_yaml_conf.virtual_server["mirrored_state"]} }
+  end
+  ### set vlan- generally should be empty.
+  unless vs_yaml_conf.virtual_server["vlan_name"].empty?
+    pp "setting enabled vlan"
+    output = %x{ruby -W0 f5_vs_set_vlan.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs_name #{vs_yaml_conf.virtual_server["name"]} --vlan_name #{vs_yaml_conf.virtual_server["vlan_name"]} }
+  end
+  
 else ### loop through each service and create vs/pool/monitor/etc
     
   service_list.each do |service_num|

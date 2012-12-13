@@ -50,7 +50,8 @@ class Optparser
       opts.on("--profile_context [PROFILE_CONTEXT_TYPE]", [:PROFILE_CONTEXT_TYPE_ALL, :PROFILE_CONTEXT_TYPE_CLIENT, :PROFILE_CONTEXT_TYPE_SERVER],   "Select Profile Context Type (Profile_context_type_all,MOREDUDE)") do |pc|
         options.profile_context = pc || "PROFILE_CONTEXT_TYPE_ALL"
       end
-      opts.on("--profile_name NAME", [:http], "Select Profile Name (http)") do |pn|
+      #opts.on("--profile_name NAME", [:http, :DB-fastL4], "Select Profile Name (http)") do |pn|
+      opts.on("--profile_name NAME [Profile Name]", "Select Profile Name (http)") do |pn|
         options.profile_name = pn
       end
       opts.on_tail("-h", "--help", "Show this message") do
