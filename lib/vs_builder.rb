@@ -112,6 +112,17 @@ def correct_member_ports(member_list, pool_port)
   members_with_ports.concat(members_wo_ports.grep(/(\d+\.\d+\.\d+\.\d+)/){|ip| "#{ip}:#{pool_port}"})
 end
 
+def correct_lb_method(method)
+  case method
+    when "round_robin"
+      return "LB_METHOD_ROUND_ROBIN"
+    when "least_connections"
+      return "LB_METHOD_LEAST_CONNECTION_MEMBER"
+    else
+      return "LB_METHOD_LEAST_CONNECTION_MEMBER"
+  end
+end
+
 if service_list.empty?
   # create vs/pool/monitor/etc for the single service defined
   # how to DRY this up?  nearly same code is repeated
@@ -229,9 +240,13 @@ else ### loop through each service and create vs/pool/monitor/etc
         end
       end
     end
+    
+    # change the lb_method to one the F5 api will respect
+    current_service_conf.pool["lb_method"] = correct_lb_method(current_service_conf.pool["lb_method"])
+    
     ### creating pool
     pp "creating pool #{current_service_conf.pool["name"].to_s}..."
-    output = %x{ruby -W0 f5_pool_create.rb --name #{current_service_conf.pool["name"]} #{member_flag_list} --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf}}
+    output = %x{ruby -W0 f5_pool_create.rb --name #{current_service_conf.pool["name"]} #{member_flag_list} --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --lb_method #{current_service_conf.pool["lb_method"]}}
     
     ### update pool member priority
     pp "updating pool member priorities"
