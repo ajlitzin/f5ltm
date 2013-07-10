@@ -29,7 +29,7 @@ class Optparser
         options.members << pmem
       end
       opts.on("--lb_method METHOD", [:LB_METHOD_ROUND_ROBIN, :LB_METHOD_LEAST_CONNECTION_MEMBER], "Load Balancing Method") do |method|
-        options.lb_method = [method] || ["LB_METHOD_ROUND_ROBIN"]
+        options.lb_method = [method.to_s] || ["LB_METHOD_ROUND_ROBIN"]
       end
       
       opts.on_tail("-h", "--help", "Show this message") do
@@ -65,7 +65,7 @@ options = Optparser.parse(ARGV)
 # exit if required parameters are missing
 # this may need some work
 # maybe swap optparse for trollop?
-REQ_PARAMS = [:bigip, :name, :members, :bigip_conn_conf]
+REQ_PARAMS = [:bigip, :name, :bigip_conn_conf]
 REQ_PARAMS.find do |p|
   Kernel.abort "Missing Argument: #{p}" unless options.respond_to?(p)
 end
