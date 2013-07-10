@@ -3,7 +3,6 @@ require 'optparse'
 require 'pp'
 require 'ostruct'
 
-# only works with 11.0 and up
 class Optparser
   def self.parse(args)
     options = OpenStruct.new
