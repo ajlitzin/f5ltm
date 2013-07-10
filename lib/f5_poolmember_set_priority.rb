@@ -13,7 +13,7 @@ class Optparser
       opts.separator ""
       opts.separator "Specific options:"
       
-      options.memberpriority = 0
+      options.member_priority = "0"
       
       opts.on( "-b", "--bigip IP", "BigIP IP address") do |bip|
         options.bigip = bip
@@ -70,6 +70,10 @@ options = Optparser.parse(ARGV)
 REQ_PARAMS = [:bigip, :name, :member, :bigip_conn_conf]
 REQ_PARAMS.find do |p|
   Kernel.abort "Missing Argument: #{p}" unless options.respond_to?(p)
+end
+
+if (options.member.nil? or options.member.to_s.eql?("nil") or options.member.to_s.empty?)
+   Kernel.abort "member can not be nil. Skipping setting priority value for member of pool #{options.name}" 
 end
 
 lb = F5::LoadBalancer.new(options.bigip, :config_file => options.bigip_conn_conf, :connect_timeout => 10)
