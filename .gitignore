@@ -1,3 +1,4 @@
 config-andy.yaml
 *.swp
 private-fixtures/
+csrs/
