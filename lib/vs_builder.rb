@@ -243,23 +243,28 @@ else ### loop through each service and create vs/pool/monitor/etc
     pp "turning on PGA"
     output = %x{ruby -W0 f5_pool_set_min_active_members.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --pool_name #{current_service_conf.pool["name"]} --min_active_members #{current_service_conf.pool["min_active_members"]} }
     
+    ### set action on service down
+    pp "setting pool action on service down"
+    output = %x{ruby -W0 f5_pool_set_action_on_service_down.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --pool_name #{current_service_conf.pool["name"]} --action #{current_service_conf.pool["action_on_service_down"]} }
+    
     ## creating monitor template
+    ## dbs only use tcp monitor, probably a more elegant way to handle this
+    unless current_service_conf.main["vip_type"].eql? "db"
+      current_service_conf.monitor["name"] = update_object_name(current_service_conf.monitor["name"].to_s, "alive", current_service_conf.main["fqdn"].to_s)
     
-    current_service_conf.monitor["name"] = update_object_name(current_service_conf.monitor["name"].to_s, "alive", current_service_conf.main["fqdn"].to_s)
+      pp "creating monitor template #{current_service_conf.monitor["name"]}..."
+      monoutput = %x{ruby -W0 f5_monitor_create_template.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --name #{current_service_conf.monitor["name"]} --parent_template #{current_service_conf.monitor["type"]} --interval #{current_service_conf.monitor["interval"]} --timeout #{current_service_conf.monitor["timeout"]}}
     
-    pp "creating monitor template #{current_service_conf.monitor["name"]}..."
-    monoutput = %x{ruby -W0 f5_monitor_create_template.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --name #{current_service_conf.monitor["name"]} --parent_template #{current_service_conf.monitor["type"]} --interval #{current_service_conf.monitor["interval"]} --timeout #{current_service_conf.monitor["timeout"]}}
+      ## set monitor send/receive strings
+      ## assumes http/https monitor type
+      pp "setting monitor send/receive strings..."
     
-    ## set monitor send/receive strings
-    ## assumes http/https monitor type
-    pp "setting monitor send/receive strings..."
+      send_string_suffix = current_service_conf.monitor["send"].to_s.concat(' HTTP/1.1\\r\\nHost: bigipalive.theplatform.com\\r\\n\\r\\n')
     
-    send_string_suffix = current_service_conf.monitor["send"].to_s.concat(' HTTP/1.1\\r\\nHost: bigipalive.theplatform.com\\r\\n\\r\\n')
-    
-    monoutput = %x{ruby -W0 f5_monitor_set_template_string_property.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --monitor_name #{current_service_conf.monitor["name"]} --string_property_type "STYPE_SEND" --string_value "#{send_string_suffix}"}
+      monoutput = %x{ruby -W0 f5_monitor_set_template_string_property.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --monitor_name #{current_service_conf.monitor["name"]} --string_property_type "STYPE_SEND" --string_value "#{send_string_suffix}"}
    
-    monoutput = %x{ruby -W0 f5_monitor_set_template_string_property.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --monitor_name #{current_service_conf.monitor["name"]} --string_property_type "STYPE_RECEIVE" --string_value "#{current_service_conf.monitor["recv"]}"}
-
+      monoutput = %x{ruby -W0 f5_monitor_set_template_string_property.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --monitor_name #{current_service_conf.monitor["name"]} --string_property_type "STYPE_RECEIVE" --string_value "#{current_service_conf.monitor["recv"]}"}
+    end
     ### associate monitor template with pool
     pp "associating monitor with pool..."
     monassoc_output = %x{ruby -W0 f5_pool_set_monitor_association.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --pool_name #{current_service_conf.pool["name"]} --monitor_name #{current_service_conf.monitor["name"]} }
@@ -271,7 +276,11 @@ else ### loop through each service and create vs/pool/monitor/etc
     current_service_conf.virtual_server["default_pool_name"] = update_object_name(current_service_conf.virtual_server["default_pool_name"].to_s, current_service_conf.pool["port"], current_service_conf.main["fqdn"].to_s)
     
     pp "creating virtual server #{current_service_conf.virtual_server["name"]}..."
-    output = %x{ruby -W0 f5_vs_create.rb --bigip #{options.bigip}  --bigip_conn_conf #{options.bigip_conn_conf} --address #{current_service_conf.virtual_server["address"].to_s}  --mask #{current_service_conf.virtual_server["netmask"]} --name #{current_service_conf.virtual_server["name"]} --port #{current_service_conf.virtual_server["port"]} --protocol #{current_service_conf.virtual_server["protocol"]} --resource_type #{current_service_conf.virtual_server["resource_type"]} --pool_name #{current_service_conf.virtual_server["default_pool_name"]} --profile_context #{current_service_conf.virtual_server["profile_context"]}}
+    #output = %x{ruby -W0 f5_vs_create.rb --bigip #{options.bigip}  --bigip_conn_conf #{options.bigip_conn_conf} --address #{current_service_conf.virtual_server["address"].to_s}  --mask #{current_service_conf.virtual_server["netmask"]} --name #{current_service_conf.virtual_server["name"]} --port #{current_service_conf.virtual_server["port"]} --protocol #{current_service_conf.virtual_server["protocol"]} --resource_type #{current_service_conf.virtual_server["resource_type"]} --pool_name #{current_service_conf.virtual_server["default_pool_name"]} --profile_context #{current_service_conf.virtual_server["profile_context"]}}
+    
+    output = %x{ruby -W0 f5_vs_create.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --address #{current_service_conf.virtual_server["address"].to_s}  --mask #{current_service_conf.virtual_server["netmask"]} --name #{current_service_conf.virtual_server["name"]} --port #{current_service_conf.virtual_server["port"]} --protocol #{current_service_conf.virtual_server["protocol"]} --resource_type #{current_service_conf.virtual_server["resource_type"]} --pool_name #{current_service_conf.virtual_server["default_pool_name"]} --profile_name #{current_service_conf.virtual_server["profile_name"]}}
+# not sending this in stopped the error, but it still didn't link the vs to the pool or use the right profile for DBs   
+   # --profile_context #{current_service_conf.virtual_server["profile_context"]}}
     
     ###### update VS settings ######
     ### add snat if necessary
@@ -279,6 +288,18 @@ else ### loop through each service and create vs/pool/monitor/etc
       pp "adding snat pool..."
       output = %x{ruby -W0 f5_vs_set_snat_pool.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs_name #{current_service_conf.virtual_server["name"]} --snat_pool_name #{current_service_conf.virtual_server["snat"]} }
     end
+    ### set mirrored state- should only be enabled for DBs
+    unless current_service_conf.virtual_server["mirrored_state"].empty?
+      pp "setting mirrored enabled state"
+      output = %x{ruby -W0 f5_vs_set_connection_mirror_state.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs_name #{current_service_conf.virtual_server["name"]} --mirrored_state #{current_service_conf.virtual_server["mirrored_state"]} }
+    end
+    ### set vlan- generally should be empty.
+    unless current_service_conf.virtual_server["vlan_name"].empty?
+      pp "setting enabled vlan"
+      output = %x{ruby -W0 f5_vs_set_vlan.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs_name #{current_service_conf.virtual_server["name"]} --vlan_name #{current_service_conf.virtual_server["vlan_name"]} }
+    end
       
   end
 end
+
+#ruby -W0 vs_builder.rb --bigip_conn_conf ..\fixtures\config-andy.yaml --config ..\private-fixtures\web-vip-template.yml --bigip 192.168.106.x
