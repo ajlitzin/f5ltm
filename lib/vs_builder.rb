@@ -85,6 +85,7 @@ REQ_PARAMS.find do |p|
 end
 
 # read into an open struct
+# not really super awesome as it only really reads one level deep and the rest is just hashes
 vs_yaml_conf = OpenStruct.new(YAML.load_file(options.vsconf))
 
 # presume that services are split by "servicen" in yaml conf
