@@ -4,6 +4,7 @@ require 'pp'
 
 csv_data = CSV.read("../private-fixtures/lon3.csv")
 headers = csv_data.shift.map {|i| i.to_s }
+# we expect 6 columns: priority, vlan, fqdn, jetty port, vip port, member ip
 Kernel.abort "Warning!  Header count is not expected.  Expected 6, got #{headers.length}" unless headers.length == 6
 
 # just overwrite the header names to what i like
@@ -12,7 +13,9 @@ pp "#{headers}\n"
 
 string_data = csv_data.map {|row| row.map {|cell| cell.to_s } }
 csv_array_of_hashes = string_data.map {|row| Hash[*headers.zip(row).flatten]}
+new_csv_array_of_hashes =[]
 
+#pp "#{csv_array_of_hashes}\n"
 pp "#{csv_array_of_hashes[0]}\n"
 
 # normalize all the vip fqdns to lowercase and prepend with lon3
@@ -28,9 +31,18 @@ csv_array_of_hashes.each do |member|
     else
       member["priority"] = 3
   end
+  jetty_ports = member["vip_port"].split(";")
+  jetty_ports.each do | cur_port |
+    #pp "cur_port is #{cur_port}"
+    member["vip_port"] = cur_port
+    #pp "member vip port is #{member["vip_port"]}"
+    new_csv_array_of_hashes.push(member)
+  end
 end
-pp "#{csv_array_of_hashes[50]["fqdn"]}"
+#pp "#{new_csv_array_of_hashes}\n"
 
+csv_array_of_hashes = new_csv_array_of_hashes
+pp "#{csv_array_of_hashes[50]["fqdn"]}"
 # the csv is pool member focused so vip names are repeated
 # we need a list of unique fqdns
 fqdns_array =[]
@@ -54,11 +66,11 @@ pool_hash = {}
       #pp "cur member, #{member["fqdn"]} matches cur fqdn, #{cur_fqdn}"
       #pp "member #{member["pool_mem_ip"]}, priority=  #{member["priority"]}"
       member_list.push({"memberdef"=> "#{member["pool_mem_ip"]}", "priority"=> "#{member["priority"]}"})
-      pp "member list #{member_list}"
+      #pp "member list #{member_list}"
     end
     pool_hash = { "name" => "", "port"=> "#{member["jetty_port"]}", "lb_method" => "least_connections", "monitor_name" => "", "min_active_members" => 1, "action_on_service_down"=> "SERVICE_DOWN_ACTION_NONE", "pool_members" => member_list}
   end
-  vs_hash = { "name"=> "", "address"=>"1.2.3.4", "port" => 80, "protocol"=> "", "netmask" => "", "resource_type"=> "", "default_pool_name"=> "", "profile_context"=>"", "profile_name"=>"http", "snat"=> "", "mirrored_state"=> "", "vlan_name"=>"", "ssl_client_profile"=>""}
+  vs_hash = { "name"=> "", "address"=>"1.2.3.4", "port" => member["vip_port"], "protocol"=> "", "netmask" => "", "resource_type"=> "", "default_pool_name"=> "", "profile_context"=>"", "profile_name"=>"http", "snat"=> "", "mirrored_state"=> "", "vlan_name"=>"", "ssl_client_profile"=>""}
   #service_num.next
   
   service_hash = {"service#{service_num}" => { "main"=> main_hash, "monitor"=>monitor_hash, "pool"=> pool_hash, "virtual_server"=> vs_hash }}
