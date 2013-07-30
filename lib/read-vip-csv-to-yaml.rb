@@ -1,6 +1,7 @@
 require 'yaml'
 require 'csv'
 require 'pp'
+require 'ipaddress'
 
 csv_data = CSV.read("../private-fixtures/lon3.csv")
 headers = csv_data.shift.map {|i| i.to_s }
@@ -61,17 +62,15 @@ csv_array_of_hashes = new_csv_array_of_hashes
 
 
 new_csv_array_of_hashes = []
-  
-
 csv_array_of_hashes.each do |outer_member| 
 
   temp_hash = {}
   member_list = []
   cur_fqdn = outer_member["fqdn"]
   cur_port = outer_member["vip_port"]
-  pp "current fqdn #{cur_fqdn}"
-  pp "current port #{cur_port}"
-  puts
+  #pp "current fqdn #{cur_fqdn}"
+  #pp "current port #{cur_port}"
+  #puts
   # inner loop to create the array of pool members
   csv_array_of_hashes.each do |member|
     if (member["fqdn"].eql?(cur_fqdn)) and (member["vip_port"].eql?(cur_port))
@@ -81,49 +80,71 @@ csv_array_of_hashes.each do |outer_member|
       #pp "member list #{member_list}"
     end
   end # inner csv array loop
-  pp "member list #{member_list}"
+  #pp "member list #{member_list}"
   
   outer_member.each_pair do |k, v|
     temp_hash[k] = v
   end
   temp_hash.delete("pool_mem_ip")
   temp_hash.delete("priority")
-  pp "temp hash is #{temp_hash}"
-  puts
+  #pp "temp hash is #{temp_hash}"
+  #puts
   temp_hash.merge!("pool_mem_ips"=>member_list)
-  pp "temp hash after adding pool_mem_ips #{temp_hash}"
-  puts
+  #pp "temp hash after adding pool_mem_ips #{temp_hash}"
+  #puts
   new_csv_array_of_hashes.push(temp_hash)
-  pp "the in progress array"
-  puts
-  new_csv_array_of_hashes.each do |cmem|
-    pp cmem
-  end
-  puts "end of in-progress array"
-  puts
+  #pp "the in progress array"
+  #puts
+  #new_csv_array_of_hashes.each do |cmem|
+  #  pp cmem
+  #end
+  #puts "end of in-progress array"
+  #puts
   
   new_csv_array_of_hashes.uniq!
-  pp "the deduped in progress array"
-  puts
-  new_csv_array_of_hashes.each do |cmem|
-    pp cmem
-  end
-  puts "end of deduped in-progress array"
-  puts
+  #pp "the deduped in progress array"
+  #puts
+  #new_csv_array_of_hashes.each do |cmem|
+  #  pp cmem
+  #end
+  #puts "end of deduped in-progress array"
+  #puts
   
   
 end # outer csv array loop
 
 # we now have an array of hashes where each member
 # represents a single vip
+# let's add vip ips' to it
+vip_range_obj = IPAddress "185.28.92.0/24"
+# create an array of the ips (only because we need to get rid of
+# ones already used
+vip_ips=[]
+vip_range_obj.each_host do |host|
+  vip_ips.push(host.address)
+end
+# we already assinged 185.28.92.1-.4, so get rid of them
+vip_ips.slice!(0..4)
+# now get it to the size we need, one ip for each vip
+vip_ips.slice!(new_csv_array_of_hashes.length..-1)
+
+iterator = 0
 new_csv_array_of_hashes.each do | cur_mem |
+  
   pool_hash = {}
   vs_hash = {}
   main_hash = {}
   monitor_hash = {}
   service_hash = {}
   cur_fqdn = cur_mem["fqdn"]
-
+  
+  pp "iterator #{iterator}"
+  pp "cur vip ip #{vip_ips[iterator]}"
+  # give every vip in the array an ip
+  cur_mem.merge!("vip_ip"=>vip_ips[iterator])
+  iterator+=1
+  pp "current member #{cur_mem}"
+  
   main_hash = { "fqdn"=> cur_mem["fqdn"], "vip_type" =>'web'}
   
   monitor_hash = { "name" => "", "type" => "http", "send"=> " GET /management/alive", "recv" => "Web Service is Ok"}
@@ -132,7 +153,7 @@ new_csv_array_of_hashes.each do | cur_mem |
   #pp "#{pool_hash}\n"
   #puts
   
-  vs_hash = { "name"=> "", "address"=>"1.2.3.4", "port" => cur_mem["vip_port"], "protocol"=> "", "netmask" => "", "resource_type"=> "", "default_pool_name"=> "", "profile_context"=>"", "profile_name"=>"http", "snat"=> "", "mirrored_state"=> "", "vlan_name"=>"", "ssl_client_profile"=>""}  
+  vs_hash = { "name"=> "", "address"=>cur_mem["vip_ip"], "port" => cur_mem["vip_port"], "protocol"=> "", "netmask" => "", "resource_type"=> "", "default_pool_name"=> "", "profile_context"=>"", "profile_name"=>"http", "snat"=> "", "mirrored_state"=> "", "vlan_name"=>"", "ssl_client_profile"=>""}  
  
   service_hash = {"service1" => { "main"=> main_hash, "monitor"=>monitor_hash, "pool"=> pool_hash, "virtual_server"=> vs_hash }}
 
@@ -148,5 +169,5 @@ new_csv_array_of_hashes.each do | cur_mem |
     end
   else
     puts "Warning -skipping file for \"#{cur_fqdn}\" - non alpha chars in fqdn"  
-end  
+  end  
 end # new csv array loop
