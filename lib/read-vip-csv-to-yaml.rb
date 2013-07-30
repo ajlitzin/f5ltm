@@ -64,11 +64,6 @@ new_csv_array_of_hashes = []
   
 
 csv_array_of_hashes.each do |outer_member| 
-  pool_hash = {}
-  vs_hash = {}
-  main_hash = {}
-  monitor_hash = {}
-  service_hash = {}
 
   temp_hash = {}
   member_list = []
@@ -116,39 +111,42 @@ csv_array_of_hashes.each do |outer_member|
   puts "end of deduped in-progress array"
   puts
   
-  main_hash = { "fqdn"=> "#{cur_fqdn}", "vip_type" =>'web'}
+  
+end # outer csv array loop
+
+# we now have an array of hashes where each member
+# represents a single vip
+new_csv_array_of_hashes.each do | cur_mem |
+  pool_hash = {}
+  vs_hash = {}
+  main_hash = {}
+  monitor_hash = {}
+  service_hash = {}
+  cur_fqdn = cur_mem["fqdn"]
+
+  main_hash = { "fqdn"=> cur_mem["fqdn"], "vip_type" =>'web'}
   
   monitor_hash = { "name" => "", "type" => "http", "send"=> " GET /management/alive", "recv" => "Web Service is Ok"}
 
-  pool_hash = { "name" => "", "port"=> "#{outer_member["jetty_port"]}", "lb_method" => "round_robin", "monitor_name" => "", "min_active_members" => 1, "action_on_service_down"=> "SERVICE_DOWN_ACTION_NONE", "pool_members" => outer_member["pool_mem_ips"]}
+  pool_hash = { "name" => "", "port"=> "#{cur_mem["jetty_port"]}", "lb_method" => "round_robin", "monitor_name" => "", "min_active_members" => 1, "action_on_service_down"=> "SERVICE_DOWN_ACTION_NONE", "pool_members" => cur_mem["pool_mem_ips"]}
   #pp "#{pool_hash}\n"
   #puts
   
-  #vs_hash = { "name"=> "", "address"=>"1.2.3.4", "port" => outer_member["vip_port"], "protocol"=> "", "netmask" => "", "resource_type"=> "", "default_pool_name"=> "", "profile_context"=>"", "profile_name"=>"http", "snat"=> "", "mirrored_state"=> "", "vlan_name"=>"", "ssl_client_profile"=>""}  
+  vs_hash = { "name"=> "", "address"=>"1.2.3.4", "port" => cur_mem["vip_port"], "protocol"=> "", "netmask" => "", "resource_type"=> "", "default_pool_name"=> "", "profile_context"=>"", "profile_name"=>"http", "snat"=> "", "mirrored_state"=> "", "vlan_name"=>"", "ssl_client_profile"=>""}  
  
-  #service_hash = {"service1" => { "main"=> main_hash, "monitor"=>monitor_hash, "pool"=> pool_hash, "virtual_server"=> vs_hash }}
-end # outer csv array loop
-# dedupe the array
-#new_csv_array_of_hashes.uniq!
-#pp "the deduped final array"
-#new_csv_array_of_hashes.each do |cmem|
-#  pp cmem
-#end
-#pp "end of the deduped final array"
-#puts
+  service_hash = {"service1" => { "main"=> main_hash, "monitor"=>monitor_hash, "pool"=> pool_hash, "virtual_server"=> vs_hash }}
 
-#loop through new array of hashes
-exit
-# use a regex to verify the fqdn is a valid format
-if cur_fqdn.match(/(?=^.{1,254}$)(^(?:(?!\d+\.)[a-zA-Z0-9_\-]{1,63}\.?)+(?:[a-zA-Z]{2,})$)/)
-  puts "\n"
-  puts "about to write file #{cur_fqdn}_#{vs_hash["port"]}\n"
-  File.open("../private-fixtures/lon3/#{cur_fqdn}_#{vs_hash["port"]}.yml", 'w') do |file|
-  #  top_array.each do |cur_hash|
-  #    file.write(cur_hash.to_yaml)
-  #  end
-        file.write(service_hash.to_yaml)
-  end
-else
-  puts "Warning -skipping file for \"#{cur_fqdn}\" - non alpha chars in fqdn"  
+  # use a regex to verify the fqdn is a valid format
+  if cur_fqdn.match(/(?=^.{1,254}$)(^(?:(?!\d+\.)[a-zA-Z0-9_\-]{1,63}\.?)+(?:[a-zA-Z]{2,})$)/)
+    puts "\n"
+    puts "about to write file #{cur_fqdn}_#{vs_hash["port"]}\n"
+    File.open("../private-fixtures/lon3/#{cur_fqdn}_#{vs_hash["port"]}.yml", 'w') do |file|
+    #  top_array.each do |cur_hash|
+    #    file.write(cur_hash.to_yaml)
+    #  end
+          file.write(service_hash.to_yaml)
+    end
+  else
+    puts "Warning -skipping file for \"#{cur_fqdn}\" - non alpha chars in fqdn"  
 end  
+end # new csv array loop
