@@ -138,12 +138,9 @@ new_csv_array_of_hashes.each do | cur_mem |
   service_hash = {}
   cur_fqdn = cur_mem["fqdn"]
   
-  pp "iterator #{iterator}"
-  pp "cur vip ip #{vip_ips[iterator]}"
   # give every vip in the array an ip
   cur_mem.merge!("vip_ip"=>vip_ips[iterator])
   iterator+=1
-  pp "current member #{cur_mem}"
   
   main_hash = { "fqdn"=> cur_mem["fqdn"], "vip_type" =>'web'}
   
