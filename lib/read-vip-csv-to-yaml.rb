@@ -6,10 +6,10 @@ require 'ipaddress'
 csv_data = CSV.read("../private-fixtures/lon3.csv")
 headers = csv_data.shift.map {|i| i.to_s }
 # we expect 6 columns: priority, vlan, fqdn, jetty port, vip port, member ip
-Kernel.abort "Warning!  Header count is not expected.  Expected 6, got #{headers.length}" unless headers.length == 6
+Kernel.abort "Warning!  Header count is not expected.  Expected 7, got #{headers.length}" unless headers.length == 7
 
 # just overwrite the header names to what i like
-headers = [ "priority", "vlan_name", "fqdn", "jetty_port", "vip_port", "pool_mem_ip"]
+headers = [ "priority", "vlan_name", "fqdn", "jetty_port", "vip_port", "pool_mem_ip", "alive_url"]
 #pp "#{headers}\n"
 
 string_data = csv_data.map {|row| row.map {|cell| cell.to_s } }
@@ -144,13 +144,13 @@ new_csv_array_of_hashes.each do | cur_mem |
   
   main_hash = { "fqdn"=> cur_mem["fqdn"], "vip_type" =>'web'}
   
-  monitor_hash = { "name" => "", "type" => "http", "send"=> " GET /management/alive", "recv" => "Web Service is Ok"}
+  monitor_hash = { "name" => "", "type" => "http", "send"=> "GET #{cur_mem["alive_url"]}", "recv" => "Web Service is Ok"}
 
   pool_hash = { "name" => "", "port"=> "#{cur_mem["jetty_port"]}", "lb_method" => "round_robin", "monitor_name" => "", "min_active_members" => 1, "action_on_service_down"=> "SERVICE_DOWN_ACTION_NONE", "pool_members" => cur_mem["pool_mem_ips"]}
   #pp "#{pool_hash}\n"
   #puts
   
-  vs_hash = { "name"=> "", "address"=>cur_mem["vip_ip"], "port" => cur_mem["vip_port"], "protocol"=> "", "netmask" => "", "resource_type"=> "", "default_pool_name"=> "", "profile_context"=>"", "profile_name"=>"http", "snat"=> "", "mirrored_state"=> "", "vlan_name"=>"", "ssl_client_profile"=>""}  
+  vs_hash = { "name"=> "", "address"=>cur_mem["vip_ip"], "port" => cur_mem["vip_port"], "protocol"=> "", "netmask" => "", "resource_type"=> "", "default_pool_name"=> "", "profile_context"=>"", "profile_name"=>"http", "snat"=> "webs_ltm_int_transit_snat_pool", "mirrored_state"=> "", "vlan_name"=>"", "ssl_client_profile"=>""}  
  
   service_hash = {"service1" => { "main"=> main_hash, "monitor"=>monitor_hash, "pool"=> pool_hash, "virtual_server"=> vs_hash }}
 
