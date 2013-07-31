@@ -150,7 +150,13 @@ new_csv_array_of_hashes.each do | cur_mem |
   #pp "#{pool_hash}\n"
   #puts
   
-  vs_hash = { "name"=> "", "address"=>cur_mem["vip_ip"], "port" => cur_mem["vip_port"], "protocol"=> "", "netmask" => "", "resource_type"=> "", "default_pool_name"=> "", "profile_context"=>"", "profile_name"=>"http", "snat"=> "webs_ltm_int_transit_snat_pool", "mirrored_state"=> "", "vlan_name"=>"", "ssl_client_profile"=>""}  
+  if cur_mem["vip_port"].to_s.eql?("443")
+    ssl_client_profile_name = "#{cur_mem["fqdn"].sub(/^lon3\./,'')}_ssl"
+  else
+    ssl_client_profile_name = ""
+  end
+  
+  vs_hash = { "name"=> "", "address"=>cur_mem["vip_ip"], "port" => cur_mem["vip_port"], "protocol"=> "", "netmask" => "", "resource_type"=> "", "default_pool_name"=> "", "profile_context"=>"", "profile_name"=>"http", "snat"=> "webs_ltm_int_transit_snat_pool", "mirrored_state"=> "", "vlan_name"=>"", "ssl_client_profile"=>"#{ssl_client_profile_name}"}  
  
   service_hash = {"service1" => { "main"=> main_hash, "monitor"=>monitor_hash, "pool"=> pool_hash, "virtual_server"=> vs_hash }}
 
