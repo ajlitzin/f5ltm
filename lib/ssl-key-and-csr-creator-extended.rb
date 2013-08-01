@@ -253,7 +253,7 @@ fqdns_file.each do |cur_fqdn|
 
   if csr_output
     csr_output_file = output_dir + "/" + key_data['id'] + ".csr"
-    File.open(csr_output_file, 'w') { |file| file.write(csr) }
+    File.open(csr_output_file, 'w') { |file| file.write(csr[0]) }
   end
 
   puts
