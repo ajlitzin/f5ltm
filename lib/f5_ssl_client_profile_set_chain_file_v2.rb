@@ -24,12 +24,8 @@ class Optparser
         options.profile_name = name
       end
       
-      opts.on("-k", "--key-name KEY_NAME", "Name of SSL key") do |key_name|
-        options.key_name = key_name
-      end
-      
-      opts.on("-c", "--cert-name CERT_NAME", "Name of SSL Certificate") do |cert_name|
-        options.cert_name = cert_name
+      opts.on("-c", "--chain-file-name CHAIN_FILE_NAME", "Name of CA Chain File") do |chain_name|
+        options.chain_name = chain_name
       end
 	  
       opts.on_tail("-h", "--help", "Show this message") do
@@ -46,7 +42,7 @@ end #class Optparser
 # get command line options
 options = Optparser.parse(ARGV)
 
-REQ_PARAMS = [:bigip, :profile_name, :key_name, :cert_name, :bigip_conn_conf]
+REQ_PARAMS = [:bigip, :profile_name, :chain_name, :bigip_conn_conf]
 REQ_PARAMS.find do |p|
   Kernel.abort "Missing Argument: #{p}" unless options.respond_to?(p)
 end
@@ -59,17 +55,17 @@ SSLClientProfileString = Struct.new(:name, :default_flag) do
   end
 end
 
-def create_ssl_client_profile(lb, profile_list, key_list, cert_list)
-  lb.icontrol.locallb.profile_client_ssl.create(profile_list, key_list, cert_list)
+def set_chain_file(lb, profile_list, chain_list)
+  lb.icontrol.locallb.profile_client_ssl.set_chain_file_v2(profile_list, chain_list)
 end
 
 profile_list = [options.profile_name]
-my_key_profile_string = SSLClientProfileString.new(options.key_name, "false")
-my_cert_profile_string = SSLClientProfileString.new(options.cert_name, "false")
-my_key_list = [my_key_profile_string.to_hash]
-my_cert_list = [my_cert_profile_string.to_hash]
+pp "profile list #{profile_list}"
+my_chain_file_string = SSLClientProfileString.new(options.chain_name, "false")
+pp "chain file string #{my_chain_file_string.to_hash}"
+my_chain_list = [my_chain_file_string.to_hash]
 
-create_ssl_client_profile(lb, profile_list, my_key_list, my_cert_list)
+set_chain_file(lb, profile_list, my_chain_list)
 
 # example
 # ruby f5_ssl_client_profile_create.rb --bigip_conn_conf ..\fixtures\config-andy.yaml --bigip 192.168.106.16 -k andy.iscool.pleasework.com.key -c andy.iscool.pleasework.com.crt -p andy.iscool.pleasework.com_ssl

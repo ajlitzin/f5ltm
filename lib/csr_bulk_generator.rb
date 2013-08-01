@@ -67,3 +67,6 @@ fqdns_file.each do |cur_fqdn|
   
   output = %x{ruby ssl-key-and-csr-creator.rb --bigip-address #{options.bigip} --bigip-user #{options.bipuser} --bigip-pass #{options.bippass} --key-bit-length 2048 --common-name #{cur_fqdn} --country "US" --state "Washington" --locality "Seattle" --organization "thePlatform for Media, Inc" --division "Network Operations" --csr-output --output-dir #{options.outputdir} }
 end
+
+# example
+# ruby csr_bulk_generator.rb --config ../private-fixtures/fqdns_for_csrs.yml --output-dir ../csrs --bigip 192.168.106.xxx -u user.name -p password
