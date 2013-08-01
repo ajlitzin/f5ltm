@@ -311,7 +311,7 @@ else ### loop through each service and create vs/pool/monitor/etc
     ###### update VS settings ######
     ### add snat if necessary
     unless current_service_conf.virtual_server["snat"].nil?
-      pp "adding snat pool..."
+      pp "associating virtual server with snat pool..."
       output = %x{ruby -W0 f5_vs_set_snat_pool.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs_name #{current_service_conf.virtual_server["name"]} --snat_pool_name #{current_service_conf.virtual_server["snat"]} }
     end
     ### set mirrored state- should only be enabled for DBs
@@ -324,7 +324,16 @@ else ### loop through each service and create vs/pool/monitor/etc
       pp "setting enabled vlan"
       output = %x{ruby -W0 f5_vs_set_vlan.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs_name #{current_service_conf.virtual_server["name"]} --vlan_name #{current_service_conf.virtual_server["vlan_name"]} }
     end
-      
+    
+    unless current_service_conf.virtual_server["ssl_client_profile"].empty?
+      pp "creating ssl client profile"
+      output = %x{ruby -W0 f5_ssl_client_profile_create.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --profile #{current_service_conf.virtual_server["ssl_client_profile"]} --key-name #{current_service_conf.virtual_server["ssl_client_profile"].sub(/_ssl$/,'.key')} --cert-name #{current_service_conf.virtual_server["ssl_client_profile"].sub(/_ssl$/,'.crt')}  }
+      pp "chaining the ssl client profile to the CA intermediate cert"
+      # hard coded to Entrust, v2 is for 11.x up
+      output = %x{ruby -W0 f5_ssl_client_profile_set_chain_file_v2.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --profile #{current_service_conf.virtual_server["ssl_client_profile"]} --chain-file-name "EntrustL1CChain.crt"  }
+      pp "linking ssl client profile"
+      output = %x{ruby -W0 f5_vs_add_profile.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs-name #{current_service_conf.virtual_server["name"]} --profile #{current_service_conf.virtual_server["ssl_client_profile"]} --profile-context-type "PROFILE_CONTEXT_TYPE_CLIENT"  }
+    end
   end
 end
 
