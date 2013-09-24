@@ -56,6 +56,7 @@ end
 #  pp "#{cur_mem}\n"
 #end
 
+
 csv_array_of_hashes = new_csv_array_of_hashes
 #pp "row 2 of csv of hashes \n"
 #pp "#{csv_array_of_hashes[2]["fqdn"]}"
@@ -63,7 +64,6 @@ csv_array_of_hashes = new_csv_array_of_hashes
 
 new_csv_array_of_hashes = []
 csv_array_of_hashes.each do |outer_member| 
-
   temp_hash = {}
   member_list = []
   cur_fqdn = outer_member["fqdn"]
@@ -113,9 +113,6 @@ csv_array_of_hashes.each do |outer_member|
   
 end # outer csv array loop
 
-# we now have an array of hashes where each member
-# represents a single vip
-# let's add vip ips' to it
 vip_range_obj = IPAddress "185.28.92.0/24"
 # create an array of the ips (only because we need to get rid of
 # ones already used
@@ -126,51 +123,70 @@ end
 # we already assinged 185.28.92.1-.4, so get rid of them
 vip_ips.slice!(0..4)
 # now get it to the size we need, one ip for each vip
-vip_ips.slice!(new_csv_array_of_hashes.length..-1)
+#vip_ips.slice!(new_csv_array_of_hashes.length..-1)
 
-iterator = 0
-new_csv_array_of_hashes.each do | cur_mem |
-  
-  pool_hash = {}
-  vs_hash = {}
-  main_hash = {}
-  monitor_hash = {}
-  service_hash = {}
-  cur_fqdn = cur_mem["fqdn"]
-  
-  # give every vip in the array an ip
-  cur_mem.merge!("vip_ip"=>vip_ips[iterator])
-  iterator+=1
-  
-  main_hash = { "fqdn"=> cur_mem["fqdn"], "vip_type" =>'web'}
-  
-  monitor_hash = { "name" => "", "type" => "http", "send"=> "GET #{cur_mem["alive_url"]}", "recv" => "Web Service is Ok"}
+fqdns_array=[]
+new_csv_array_of_hashes.each do |cur_mem|
+  fqdns_array.push(cur_mem["fqdn"])
+end
+fqdns_array.uniq!
+iterator=0
 
-  pool_hash = { "name" => "", "port"=> "#{cur_mem["jetty_port"]}", "lb_method" => "round_robin", "monitor_name" => "", "min_active_members" => 1, "action_on_service_down"=> "SERVICE_DOWN_ACTION_NONE", "pool_members" => cur_mem["pool_mem_ips"]}
-  #pp "#{pool_hash}\n"
-  #puts
-  
-  if cur_mem["vip_port"].to_s.eql?("443")
-    ssl_client_profile_name = "#{cur_mem["fqdn"].sub(/^lon3\./,'')}_ssl"
-  else
-    ssl_client_profile_name = ""
-  end
-  
-  vs_hash = { "name"=> "", "address"=>cur_mem["vip_ip"], "port" => cur_mem["vip_port"], "protocol"=> "", "netmask" => "", "resource_type"=> "", "default_pool_name"=> "", "profile_context"=>"", "profile_name"=>"http", "snat"=> "webs_ltm_int_transit_snat_pool", "mirrored_state"=> "", "vlan_name"=>"", "ssl_client_profile"=>"#{ssl_client_profile_name}"}  
- 
-  service_hash = {"service1" => { "main"=> main_hash, "monitor"=>monitor_hash, "pool"=> pool_hash, "virtual_server"=> vs_hash }}
-
-  # use a regex to verify the fqdn is a valid format
-  if cur_fqdn.match(/(?=^.{1,254}$)(^(?:(?!\d+\.)[a-zA-Z0-9_\-]{1,63}\.?)+(?:[a-zA-Z]{2,})$)/)
-    puts "\n"
-    puts "about to write file #{cur_fqdn}_#{vs_hash["port"]}\n"
-    File.open("../private-fixtures/lon3/#{cur_fqdn}_#{vs_hash["port"]}.yml", 'w') do |file|
-    #  top_array.each do |cur_hash|
-    #    file.write(cur_hash.to_yaml)
-    #  end
-          file.write(service_hash.to_yaml)
+fqdns_array.each do |cur_fqdn|
+  new_csv_array_of_hashes.each do |cur_mem|
+    if cur_mem["fqdn"].eql?(cur_fqdn)
+      cur_mem.merge!("vip_ip"=>vip_ips[iterator])
     end
-  else
-    puts "Warning -skipping file for \"#{cur_fqdn}\" - non alpha chars in fqdn"  
-  end  
-end # new csv array loop
+  end
+  iterator+=1
+end
+ 
+ 
+File.open("../private-fixtures/lon3/vip_summary.txt", 'w') do |hosts_file|
+  new_csv_array_of_hashes.each do | cur_mem |
+    
+    pool_hash = {}
+    vs_hash = {}
+    main_hash = {}
+    monitor_hash = {}
+    service_hash = {}
+    cur_fqdn = cur_mem["fqdn"]
+    
+  # write to the hosts file
+    hosts_file.write("#{cur_mem["vip_ip"]} #{cur_fqdn}\n")  
+    
+    
+    
+    main_hash = { "fqdn"=> cur_mem["fqdn"], "vip_type" =>'web'}
+    
+    monitor_hash = { "name" => "", "type" => "http", "send"=> "GET #{cur_mem["alive_url"]}", "recv" => "Web Service is Ok"}
+
+    pool_hash = { "name" => "", "port"=> "#{cur_mem["jetty_port"]}", "lb_method" => "round_robin", "monitor_name" => "", "min_active_members" => 1, "action_on_service_down"=> "SERVICE_DOWN_ACTION_NONE", "pool_members" => cur_mem["pool_mem_ips"]}
+    #pp "#{pool_hash}\n"
+    #puts
+    
+    if cur_mem["vip_port"].to_s.eql?("443")
+      ssl_client_profile_name = "#{cur_mem["fqdn"].sub(/^lon3\./,'')}_ssl"
+    else
+      ssl_client_profile_name = ""
+    end
+    
+    vs_hash = { "name"=> "", "address"=>cur_mem["vip_ip"], "port" => cur_mem["vip_port"], "protocol"=> "", "netmask" => "", "resource_type"=> "", "default_pool_name"=> "", "profile_context"=>"", "profile_name"=>"http", "snat"=> "webs_ltm_int_transit_snat_pool", "mirrored_state"=> "", "vlan_name"=>"", "ssl_client_profile"=>"#{ssl_client_profile_name}"}  
+   
+    service_hash = {"service1" => { "main"=> main_hash, "monitor"=>monitor_hash, "pool"=> pool_hash, "virtual_server"=> vs_hash }}
+
+    # use a regex to verify the fqdn is a valid format
+    if cur_fqdn.match(/(?=^.{1,254}$)(^(?:(?!\d+\.)[a-zA-Z0-9_\-]{1,63}\.?)+(?:[a-zA-Z]{2,})$)/)
+      puts "\n"
+      puts "about to write file #{cur_fqdn}_#{vs_hash["port"]}\n"
+      File.open("../private-fixtures/lon3/#{cur_fqdn}_#{vs_hash["port"]}.yml", 'w') do |file|
+      #  top_array.each do |cur_hash|
+      #    file.write(cur_hash.to_yaml)
+      #  end
+            file.write(service_hash.to_yaml)
+      end
+    else
+      puts "Warning -skipping file for \"#{cur_fqdn}\" - non alpha chars in fqdn"  
+    end  
+  end # new csv array loop
+end # vip summary file write

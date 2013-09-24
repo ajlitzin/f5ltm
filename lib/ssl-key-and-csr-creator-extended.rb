@@ -221,9 +221,16 @@ end
   
 fqdns_file.each do |cur_fqdn|
   puts " cur fqdn is #{cur_fqdn}"
+  
   x509_data['common_name'] = cur_fqdn.chomp
   # basically ignoring user input key id here- should write better logic around this
-  key_data['id'] = cur_fqdn.chomp
+  if cur_fqdn.match(/^\*\./) then
+    key_data['id'] = cur_fqdn.chomp.sub(/^\*\./,'').concat("-wildcard")
+    puts "key id is #{key_data['id']}"
+  else
+    key_data['id'] = cur_fqdn.chomp
+  end
+  
   puts "key_data id is #{key_data['id']}"
   
   # print a warning that there is a key id overlap.  later logic decides whether or not to overwrite

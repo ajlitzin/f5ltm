@@ -60,7 +60,7 @@ SSLClientProfileString = Struct.new(:name, :default_flag) do
 end
 
 def create_ssl_client_profile(lb, profile_list, key_list, cert_list)
-  lb.icontrol.locallb.profile_client_ssl.create(profile_list, key_list, cert_list)
+  lb.icontrol.locallb.profile_client_ssl.create_v2(profile_list, key_list, cert_list)
 end
 
 profile_list = [options.profile_name]
