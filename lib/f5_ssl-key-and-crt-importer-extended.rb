@@ -129,7 +129,7 @@ bigip = F5::IControl.new(bigip['address'], bigip['user'], bigip['pass'], ["Manag
 # expect keys and certs in same dir, with same name differing in suffix (.key, .crt)
 keys = []
 keys = Dir.entries(input_dir)
-keys.select! { |key_files| key_files =~ /.*\.key/}
+keys.select! { |key_files| key_files =~ /.*\.key$/}
 if verbose
   puts "list of keys: #{keys}"
 end
