@@ -328,7 +328,7 @@ else ### loop through each service and create vs/pool/monitor/etc
     unless current_service_conf.virtual_server["ssl_client_profile"].empty?
       pp "creating ssl client profile"
       # need v2 for 11.x and non v2 for 10.x
-      output = %x{ruby -W0 f5_ssl_client_profile_create_v2.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --profile #{current_service_conf.virtual_server["ssl_client_profile"]} --key-name #{current_service_conf.virtual_server["ssl_client_profile"].sub(/_ssl$/,'.key')} --cert-name #{current_service_conf.virtual_server["ssl_client_profile"].sub(/_ssl$/,'.crt')}  }
+      output = %x{ruby -W0 f5_ssl_client_profile_create.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --profile #{current_service_conf.virtual_server["ssl_client_profile"]} --key-name #{current_service_conf.virtual_server["ssl_client_profile"].sub(/_ssl$/,'.key')} --cert-name #{current_service_conf.virtual_server["ssl_client_profile"].sub(/_ssl$/,'.crt')}  }
       pp "chaining the ssl client profile to the CA intermediate cert"
       # hard coded to Entrust, v2 is for 11.x up
       output = %x{ruby -W0 f5_ssl_client_profile_set_chain_file_v2.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --profile #{current_service_conf.virtual_server["ssl_client_profile"]} --chain-file-name "EntrustL1CChain.crt"  }
