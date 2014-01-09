@@ -161,7 +161,7 @@ new_csv_array_of_hashes.each do |cur_mem|
       phl3_order = 0
     end
     #turn off for testing
-    #output = %x{ruby -W0 f5_gtm_vs_create.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --name "#{cur_dc[:dc]}.#{cur_mem["fqdn"]}" --parent #{cur_dc[:server]} --address #{cur_addr} --port #{cur_mem["vip_port"]}}
+    #output = %x{ruby -W0 f5_gtm_vs_create.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --name "#{cur_dc[:dc]}.#{cur_mem["fqdn"]_#{cur_mem["vip_port"]}" --parent #{cur_dc[:server]} --address #{cur_addr} --port #{cur_mem["vip_port"]}}
 
     
     if geo_list.include?("#{cur_mem["fqdn"]}")
@@ -193,19 +193,21 @@ new_csv_array_of_hashes.each do |cur_mem|
     
     if lon3_order == 0 then
       # we're in a lon pool, so disable phl3 member
-      if pool_name.starts_with?("geo")
+      if pool_name.start_with?("geo")
         pool_to_disable = "geo.phl3.#{cur_mem["fqdn"]}_#{cur_mem["jetty_port"]}"
       else
         pool_to_disable = "dr.phl3.#{cur_mem["fqdn"]}_#{cur_mem["jetty_port"]}"
       end
-      output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "#{cur_dc[:dc]}.#{cur_mem["fqdn"]}" --parent_name #{cur_dc[:server]} -s disabled --pool_name #{pool_to_disable} }
+      #testing
+      #output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "#{cur_dc[:dc]}.#{cur_mem["fqdn"]}" --parent_name #{cur_dc[:server]} -s disabled --pool_name #{pool_to_disable} }
     else
-      if pool_name.starts_with?("geo")
+      if pool_name.start_with?("geo")
         pool_to_disable = "geo.lon3.#{cur_mem["fqdn"]}_#{cur_mem["jetty_port"]}"
       else
         pool_to_disable = "dr.lon3.#{cur_mem["fqdn"]}_#{cur_mem["jetty_port"]}"
       end
-      output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "#{cur_dc[:dc]}.#{cur_mem["fqdn"]}" --parent_name #{cur_dc[:server]} -s disabled --pool_name #{pool_to_disable} }
+      #testing
+      #output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "#{cur_dc[:dc]}.#{cur_mem["fqdn"]}" --parent_name #{cur_dc[:server]} -s disabled --pool_name #{pool_to_disable} }
     end
     
   end  # gtm_server_objects loop
@@ -236,12 +238,14 @@ new_csv_array_of_hashes.each do |cur_mem|
   #testing
   #output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{pool_name} --address #{phl3_fqdns_vips_hash[cur_mem["fqdn"]]} --port #{cur_mem["vip_port"]} --order 1 }  
   pp "disable dr pool member (phl3) for now"
-  if pool_name.starts_with?("geo")
-    pool_to_disable = "geo.phl3.#{cur_mem["fqdn"]}_#{cur_mem["jetty_port"]}"
+  if pool_name.start_with?("geo")
+    pool_to_disable = "geo.enduser.#{cur_mem["fqdn"]}_#{cur_mem["jetty_port"]}"
   else
-    pool_to_disable = "dr.phl3.#{cur_mem["fqdn"]}_#{cur_mem["jetty_port"]}"
+    pool_to_disable = "dr.enduser.#{cur_mem["fqdn"]}_#{cur_mem["jetty_port"]}"
   end
-  output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "#{cur_dc[:dc]}.#{cur_mem["fqdn"]}" --parent_name #{cur_dc[:server]} -s disabled --pool_name #{pool_to_disable} }
+  output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "phl3.#{cur_mem["fqdn"]}" --parent_name westbigip01 -s disabled --pool_name "dr.enduser.#{cur_mem["fqdn"]}_#{cur_mem["jetty_port"]}" }
+  # after vs  name fix (append port)
+  #output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "phl3.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]}" --parent_name westbigip01 -s disabled --pool_name "dr.enduser.#{cur_mem["fqdn"]}_#{cur_mem["jetty_port"]}" }
   
 end # new_csv_array_of_hashes loop
 
