@@ -1,48 +1,12 @@
-# virtualserver
-#   create - done! f5_gtm_vs_create.rb
-# pool
-#   create - done! f5_gtm_pool_create.rb (note tried hard to use create_v2, but it doesn't work)
-#   add_pool_member - done! f5_gtm_pool_add_member.rb
-#   set_alternate_lb_method - done! f5_gtm_set_alternate_lb_method.rb
-#   set_fallback_lb_method - done! f5_gtm_set_fallback_lb_method.rb
-#   set_member_enabled_state - done! f5_gtm_set_pool_member_enabled_state.rb
-# rule
-#   create - done! f5_gtm_rule_create.rb
-# wideip
-#   create - done! f5_gtm_wideip_create.rb
-#   set_ipv6_no_error_response_state - done! f5_gtm_set_ipv6_no_error_response_state.rb
-# tie it all together logic
-
-
-
-#### create virtual servers
-# Need:
-  # name of virtual server - avail in phl3.csv
-  # name of parent ltm object - hardcode
-  # ip address of virtual server - avail if read csv to hash
-  # port of virtual server - avail in phl3.csv - need logic for multiple ports
-  
-####create pools (no members)
-  # Need:
-    # name of pool
-    
-#### add pool members
-  # Need:
-    # name of pool
-    # virtual server ip
-    # virtual server port
-    # order
-#### set alt lb method
-
-#### set fallback lb method
-
-#### set member enabled state (disable opposite member (member with order > 0)
-
-#### create rule
-
-#### create wideip
-
-#### set ipv6 no error response
+# create virtual servers
+# create pools (no members)
+# set alt lb method
+# set fallback lb method
+# create rule
+# create wideip
+# set ipv6 no error response
+# add pool members
+# set member enabled state (disable opposite member (member with order > 0)
 
 require 'yaml'
 require 'optparse'
@@ -114,9 +78,7 @@ pp "read in csv of hashes \n"
 # normalize all the vip fqdns to lowercase and get down to single vip port per vip
 csv_array_of_hashes.each do |member|
   member["fqdn"].downcase!
-  # let's not prepend now so we can do lon3 and phl3 with same array
-  #member["fqdn"].insert(0,"phl3.")
-  #for vips with multiple listeningports, split them into unique rows, but only keep the first port.  for gtm virtual servers we only create on vs object even if the actual ltm vip has multiple listening ports
+  #for vips with multiple listeningports, split them into unique rows, but only keep the first port.  for gtm virtual servers we only create one vs object even if the actual ltm vip has multiple listening ports
   vip_ports = member["vip_port"].split(";")
   # assuming that the first port will always be port 80 when there are 2 or more ports
    new_hash ={}
@@ -141,16 +103,15 @@ lon3_fqdns_vips_hash = Hash[lon3_fqdns_vips_csv]
 
 # create virtual servers for lon3bigip01 and phl3bigip01
 #gtm_server_objects = ["lon3bigip01","phl3bigip01"]
-#environs = [{:server=>"lon3bigip01",:dc=>"lon3"},{:server => "phl3bigip01",:dc=>"phl3"}]
-environs = [{:server=>"eastbigip01",:dc=>"lon3"},{:server => "westbigip01",:dc=>"phl3"}]
-# need to handle dr vs geo pool naming.  let's just hardcode for now since there aren't many geo services
-geo_list = [ "concurrency.delivery.theplatform.eu","data.registry.theplatform.eu","enduser.cuepoint.theplatform.eu","feed.entertainment.tv.theplatform.eu","feed.product.theplatform.eu","player.theplatform.eu","feed.theplatform.eu","link.theplatform.eu","mpx.theplatform.eu"]
+environs = [{:server=>"lon3bigip01",:dc=>"lon3"},{:server => "phl1tpbigip03",:dc=>"phl3"}]
+phl3_parent = "phl1tpbigip03"
+lon3_parent = "lon3bigip01"
 
 new_csv_array_of_hashes.each do |cur_mem|
   environs.each do | cur_dc |
   
     ### creating gtm virtual server object
-    pp "creating vs object #{cur_mem["fqdn"]} for ltm object #{cur_dc[:server]}..."
+    pp "creating vs object #{cur_mem["fqdn"]}_#{cur_mem["vip_port"]} for ltm object #{cur_dc[:server]}..."
     if cur_dc[:dc] == "lon3"
       cur_addr = lon3_fqdns_vips_hash[cur_mem["fqdn"]]
       lon3_order = 0
@@ -160,19 +121,13 @@ new_csv_array_of_hashes.each do |cur_mem|
       lon3_order = 1
       phl3_order = 0
     end
-    #turn off for testing
-    #output = %x{ruby -W0 f5_gtm_vs_create.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --name "#{cur_dc[:dc]}.#{cur_mem["fqdn"]_#{cur_mem["vip_port"]}" --parent #{cur_dc[:server]} --address #{cur_addr} --port #{cur_mem["vip_port"]}}
+    output = %x{ruby -W0 f5_gtm_vs_create.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --name "#{cur_dc[:dc]}.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]}" --parent #{cur_dc[:server]} --address #{cur_addr} --port #{cur_mem["vip_port"]}}
 
-    
-    if geo_list.include?("#{cur_mem["fqdn"]}")
-      pool_name = "geo.#{cur_dc[:dc]}.#{cur_mem["fqdn"]}_#{cur_mem["jetty_port"]}"
-    else
-      pool_name = "dr.#{cur_dc[:dc]}.#{cur_mem["fqdn"]}_#{cur_mem["jetty_port"]}"
-    end
+      pool_name = "dr.#{cur_dc[:dc]}.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]}"
+
     #create the pools - the environs loop will create the phl1 and phl3 pools, but we'll need to create the enduser pool outside this loop
     pp "creating gtm pool #{pool_name}..."
-    # testing
-    #output = %x{ruby -W0 f5_gtm_pool_create.rb  --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{pool_name}}
+    output = %x{ruby -W0 f5_gtm_pool_create.rb  --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{pool_name}}
     
     # set the alternate and fallback lb methods of the pool
     # scripts currently hardcode/default to Global Availability for both
@@ -180,73 +135,91 @@ new_csv_array_of_hashes.each do |cur_mem|
     output = %x{ruby -W0 f5_gtm_set_alternate_lb_method.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{pool_name}}
     output = %x{ruby -W0 f5_gtm_set_fallback_lb_method.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{pool_name}}
     
-    # add both vs as pool members to each pool
-    # add to lon3 whichever pool first
-    pp "adding #{cur_dc[:dc]} pool member to pool #{pool_name}"
-    #testing
-    #output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{pool_name} --address #{lon3_fqdns_vips_hash[cur_mem["fqdn"]]} --port #{cur_mem["vip_port"]} --order #{lon3_order} }
-    # now repeat and add phl3 pool to same pool
-    # testing
-    #output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{pool_name} --address #{phl3_fqdns_vips_hash[cur_mem["fqdn"]]} --port #{cur_mem["vip_port"]} --order #{phl3_order} }
-    
-    # disable the non-local member TBC!!
-    
-    if lon3_order == 0 then
-      # we're in a lon pool, so disable phl3 member
-      if pool_name.start_with?("geo")
-        pool_to_disable = "geo.phl3.#{cur_mem["fqdn"]}_#{cur_mem["jetty_port"]}"
-      else
-        pool_to_disable = "dr.phl3.#{cur_mem["fqdn"]}_#{cur_mem["jetty_port"]}"
-      end
-      #testing
-      #output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "#{cur_dc[:dc]}.#{cur_mem["fqdn"]}" --parent_name #{cur_dc[:server]} -s disabled --pool_name #{pool_to_disable} }
-    else
-      if pool_name.start_with?("geo")
-        pool_to_disable = "geo.lon3.#{cur_mem["fqdn"]}_#{cur_mem["jetty_port"]}"
-      else
-        pool_to_disable = "dr.lon3.#{cur_mem["fqdn"]}_#{cur_mem["jetty_port"]}"
-      end
-      #testing
-      #output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "#{cur_dc[:dc]}.#{cur_mem["fqdn"]}" --parent_name #{cur_dc[:server]} -s disabled --pool_name #{pool_to_disable} }
-    end
-    
   end  # gtm_server_objects loop
-  
+      
   # create enduser pool
-  if geo_list.include?("#{cur_mem["fqdn"]}")
-    pool_name = "geo.enduser.#{cur_mem["fqdn"]}_#{cur_mem["jetty_port"]}"
-  else
-    pool_name = "dr.enduser.#{cur_mem["fqdn"]}_#{cur_mem["jetty_port"]}"
-  end
+  pool_name = "dr.enduser.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]}"
   pp "creating gtm pool #{pool_name}..."
-  #testing
-  #output = %x{ruby -W0 f5_gtm_pool_create.rb  --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name "#{pool_name}}
+  output = %x{ruby -W0 f5_gtm_pool_create.rb  --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name "#{pool_name}}
   
   # set the alternate and fallback lb methods of the pool
   pp "setting alt and fallback lb methods to pool #{pool_name}"
-  #testing
-  #output = %x{ruby -W0 f5_gtm_set_alternate_lb_method.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{pool_name}}
-  #output = %x{ruby -W0 f5_gtm_set_fallback_lb_method.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{pool_name}}
+  output = %x{ruby -W0 f5_gtm_set_alternate_lb_method.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{pool_name}}
+  output = %x{ruby -W0 f5_gtm_set_fallback_lb_method.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{pool_name}}
   
   # add both vs as pool members to enduser pool
   # add lon3 vs.  lon3 gets order 0 because it's the primary R/W DC 
   pp "adding lon3.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]} vs to pool #{pool_name}"
-  # testing
-  #output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{pool_name} --address #{lon3_fqdns_vips_hash[cur_mem["fqdn"]]} --port #{cur_mem["vip_port"]} --order 0 }
+  output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{pool_name} --address #{lon3_fqdns_vips_hash[cur_mem["fqdn"]]} --port #{cur_mem["vip_port"]} --order 0 }
   # now repeat and add phl3 pool to same pool
   pp "adding phl3.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]} vs to pool #{pool_name}"
-  #testing
-  #output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{pool_name} --address #{phl3_fqdns_vips_hash[cur_mem["fqdn"]]} --port #{cur_mem["vip_port"]} --order 1 }  
-  pp "disable dr pool member (phl3) for now"
-  if pool_name.start_with?("geo")
-    pool_to_disable = "geo.enduser.#{cur_mem["fqdn"]}_#{cur_mem["jetty_port"]}"
-  else
-    pool_to_disable = "dr.enduser.#{cur_mem["fqdn"]}_#{cur_mem["jetty_port"]}"
-  end
-  output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "phl3.#{cur_mem["fqdn"]}" --parent_name westbigip01 -s disabled --pool_name "dr.enduser.#{cur_mem["fqdn"]}_#{cur_mem["jetty_port"]}" }
-  # after vs  name fix (append port)
-  #output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "phl3.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]}" --parent_name westbigip01 -s disabled --pool_name "dr.enduser.#{cur_mem["fqdn"]}_#{cur_mem["jetty_port"]}" }
+  output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{pool_name} --address #{phl3_fqdns_vips_hash[cur_mem["fqdn"]]} --port #{cur_mem["vip_port"]} --order 1 }  
+  
+  # create the irules
+  
+  lon3_pool_name = "dr.lon3.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]}"
+  phl3_pool_name = "dr.phl3.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]}"
+  
+ irule_def = <<END_OF_IRULE
+when DNS_REQUEST {
+# log local0. "Client request IP: [IP::remote_addr]"
+# outbound SNAT IP for standard PHL1/PHL3 LDNS
+  if { [IP::addr [IP::remote_addr]/32 equals 207.223.2.40/32] } {
+    pool #{phl3_pool_name}
+# LON3 IP range (includes NAT for standard LON3 LDNS)
+  } elseif { [IP::addr [IP::remote_addr]/23 equals 185.28.93.0/24] } {
+    pool #{lon3_pool_name}
+# Internet client LDNS - generally go to LON3 first (pool can fail to PHL3)
+  } else {
+    pool #{pool_name}
+  }
+}
+END_OF_IRULE
+
+  pp "creating iRule #{cur_mem["fqdn"]}_rule..."
+  #pp " irule def: '#{irule_def}'"
+  output = %x{ruby -W0 f5_gtm_rule_create.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --rule_name #{cur_mem["fqdn"]}_rule --rule_def '#{irule_def}' }
+
+  # create wideip and bind the iRule
+  pp "creating wideip #{cur_mem["fqdn"]}..."
+  output = %x{ruby -W0 f5_gtm_wideip_create.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --name #{cur_mem["fqdn"]} --rule_name #{cur_mem["fqdn"]}_rule }
+  
+  # enable ipv6 NoError Response
+  pp "enabling ipv6 NoError Response"
+  output = %x{ruby -W0 f5_gtm_set_ipv6_no_error_response_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --wip_name #{cur_mem["fqdn"]} -s enabled}
   
 end # new_csv_array_of_hashes loop
+
+#now virtual servers, pools, iRules, and wideips are created
+# but pools are empty
+# used a 2nd loop because i couldn't add pool member to each
+# pool until all pools and virtual servers (members) were created
+new_csv_array_of_hashes.each do |cur_mem|
+  lon3_pool_name = "dr.lon3.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]}"
+  phl3_pool_name = "dr.phl3.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]}"
+# add both vs as pool members to each pool
+  # add to lon3 vs to lon3 pool
+  pp "adding lon3.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]} pool member to pool #{lon3_pool_name}"
+  output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{lon3_pool_name} --address #{lon3_fqdns_vips_hash[cur_mem["fqdn"]]} --port #{cur_mem["vip_port"]} --order 0 }
+  # now repeat and add phl3 pool to same pool
+  pp "adding phl3.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]} pool member to pool #{lon3_pool_name}"
+  output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{lon3_pool_name} --address #{phl3_fqdns_vips_hash[cur_mem["fqdn"]]} --port #{cur_mem["vip_port"]} --order 1 }
+  # add lon3 vs to phl3 pool
+  pp "adding lon3.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]} pool member to pool #{phl3_pool_name}"
+  output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{phl3_pool_name} --address #{lon3_fqdns_vips_hash[cur_mem["fqdn"]]} --port #{cur_mem["vip_port"]} --order 1 }
+  # now repeat and add phl3 pool to same pool
+  pp "adding phl3.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]} pool member to pool #{phl3_pool_name}"
+  output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{phl3_pool_name} --address #{phl3_fqdns_vips_hash[cur_mem["fqdn"]]} --port #{cur_mem["vip_port"]} --order 0 }
+    
+  # #disable the non-local member
+  # lon3 pool, disable phl3 member
+  output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "phl3.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]}" --parent_name #{phl3_parent} -s disabled --pool_name dr.lon3.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]} }
+  # phl3 pool, disable lon3 member
+  output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "lon3.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]}" --parent_name #{lon3_parent} -s disabled --pool_name dr.phl3.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]} }
+
+  # disable phl3 member in enduser pool - only lon active by default
+  pp "disable dr.enduers phl3 pool member..."
+  output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "phl3.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]}" --parent_name #{phl3_parent} -s disabled --pool_name "dr.enduser.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]}" }
+end #cur_array_of_hashes loop #2
 
 # ruby -W0 f5_phl3_gtm_builder.rb --bigip_conn_conf "..\private-fixtures\config-andy-qa-gtm-ve.yml" -b 192.168.106.x
