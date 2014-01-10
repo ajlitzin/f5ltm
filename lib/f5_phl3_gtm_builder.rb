@@ -68,7 +68,7 @@ string_data = csv_data.map {|row| row.map {|cell| cell.to_s } }
 csv_array_of_hashes = string_data.map {|row| Hash[*headers.zip(row).flatten]}
 new_csv_array_of_hashes =[]
 
-pp "read in csv of hashes \n"
+pp "read in csv of hashes"
 # csv_array_of_hashes.each do | cur_mem |
  # pp "#{cur_mem}\n"
 # end
@@ -213,12 +213,14 @@ new_csv_array_of_hashes.each do |cur_mem|
     
   # #disable the non-local member
   # lon3 pool, disable phl3 member
+  pp "disable dr.lon3 phl3 pool member..."
   output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "phl3.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]}" --parent_name #{phl3_parent} -s disabled --pool_name dr.lon3.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]} }
   # phl3 pool, disable lon3 member
+  pp "disable dr.phl3 lon3 pool member..."
   output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "lon3.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]}" --parent_name #{lon3_parent} -s disabled --pool_name dr.phl3.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]} }
 
   # disable phl3 member in enduser pool - only lon active by default
-  pp "disable dr.enduers phl3 pool member..."
+  pp "disable dr.endusers phl3 pool member..."
   output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "phl3.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]}" --parent_name #{phl3_parent} -s disabled --pool_name "dr.enduser.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]}" }
 end #cur_array_of_hashes loop #2
 
