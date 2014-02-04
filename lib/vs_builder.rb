@@ -338,4 +338,4 @@ else ### loop through each service and create vs/pool/monitor/etc
   end
 end
 
-#ruby -W0 vs_builder.rb --bigip_conn_conf ..\fixtures\config-andy.yaml --config ..\private-fixtures\web-vip-template.yml --bigip 192.168.106.x
+#ruby -W0 vs_builder.rb --bigip_conn_conf ../private-fixtures/config-andy.yml --config ../private-fixtures/web-vip-template.yml --bigip 192.168.106.x

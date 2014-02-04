@@ -1,13 +1,12 @@
 require 'yaml'
 require 'csv'
 require 'pp'
-require 'ipaddress'
 
 #global vars
 $debug = false
 
 #we're using a csv that doesn't have pool members- that will be handled with a different script
-csv_data = CSV.read("../private-fixtures/phl3.csv")
+csv_data = CSV.read("../private-fixtures/phl3-minus-built-vips.csv")
 headers = csv_data.shift.map {|i| i.to_s }
 # we expect 4 columns: fqdn, jetty port, vip port, alive_url
 Kernel.abort "Warning!  Header count is not expected.  Expected 4, got #{headers.length}" unless headers.length == 4

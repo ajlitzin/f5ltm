@@ -33,6 +33,9 @@ class Optparser
       opts.on( "--bigip_conn_conf BigIP Connection Config File", "BigIP Connection Config File") do |bipcfile|
         options.bigip_conn_conf = bipcfile || "../private-fixtures/bigipconconf.yml"
       end
+      opts.on( "-c", "--csv_file CSV_FILE", "The CSV file will GTM objects to build") do |csv_file|
+        options.csv_file = csv_file
+      end
       
       opts.on_tail("-h", "--help", "Show this message") do
         puts opts
@@ -50,12 +53,13 @@ options = Optparser.parse(ARGV)
 # exit if required parameters are missing
 # this may need some work
 # maybe swap optparse for trollop?
-REQ_PARAMS = [ :bigip, :bigip_conn_conf]
+REQ_PARAMS = [ :bigip, :bigip_conn_conf, :csv_file]
 REQ_PARAMS.find do |p|
   Kernel.abort "Missing Argument: #{p}" unless options.respond_to?(p)
 end
 
-csv_data = CSV.read("../private-fixtures/phl3.csv")
+#csv_data = CSV.read("../private-fixtures/phl3.csv")
+csv_data = CSV.read("#{options.csv_file}")
 headers = csv_data.shift.map {|i| i.to_s }
 # we expect 4 columns: fqdn, jetty port, vip port, alive_url
 Kernel.abort "Warning!  Header count is not expected.  Expected 4, got #{headers.length}" unless headers.length == 4
@@ -140,7 +144,7 @@ new_csv_array_of_hashes.each do |cur_mem|
   # create enduser pool
   pool_name = "dr.enduser.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]}"
   pp "creating gtm pool #{pool_name}..."
-  output = %x{ruby -W0 f5_gtm_pool_create.rb  --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name "#{pool_name}}
+  output = %x{ruby -W0 f5_gtm_pool_create.rb  --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{pool_name}}
   
   # set the alternate and fallback lb methods of the pool
   pp "setting alt and fallback lb methods to pool #{pool_name}"
@@ -224,4 +228,4 @@ new_csv_array_of_hashes.each do |cur_mem|
   output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "phl3.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]}" --parent_name #{phl3_parent} -s disabled --pool_name "dr.enduser.#{cur_mem["fqdn"]}_#{cur_mem["vip_port"]}" }
 end #cur_array_of_hashes loop #2
 
-# ruby -W0 f5_phl3_gtm_builder.rb --bigip_conn_conf "..\private-fixtures\config-andy-qa-gtm-ve.yml" -b 192.168.106.x
+# ruby -W0 f5_phl3_gtm_builder.rb --bigip_conn_conf "..\private-fixtures\config-andy-qa-gtm-ve.yml" -b 192.168.106.x -c "../private-fixtures/my-gtm-list.csv"
