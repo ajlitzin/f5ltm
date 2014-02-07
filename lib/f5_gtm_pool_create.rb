@@ -4,6 +4,10 @@ require 'pp'
 require 'ostruct'
 
 class Optparser
+
+  LB_METHODS = %w[LB_METHOD_GLOBAL_AVAILABILITY LB_METHOD_TOPOLOGY]
+  LB_METHOD_ALIASES = { "ga" => "LB_METHOD_GLOBAL_AVAILABILITY", "topology" => "LB_METHOD_TOPOLOGY"}
+
   def self.parse(args)
     options = OpenStruct.new
 
@@ -36,6 +40,12 @@ class Optparser
       end
       opts.on("-o", "--order ORDER", "pool member order number") do |order|
         options.order = order
+      end
+      lb_method_list = (LB_METHOD_ALIASES.keys + LB_METHODS).join(",")
+      opts.on("--lb_method LB_METHOD", LB_METHODS, LB_METHOD_ALIASES, "Select LB Method",
+              "  (#{lb_method_list})") do |lb_method|
+        options.lb_method = lb_method
+
       end
       opts.on_tail("-h", "--help", "Show this message") do
         puts opts
@@ -84,4 +94,4 @@ pp "my_pool_member_list: #{my_pool_member_list} \n"
 pp "pool_names: #{pool_names} \n"
 gtm_create_pool(lb, pool_names, lb_methods, [my_pool_member_list])
 
-# ruby -W0 f5_gtm_pool_create.rb --bigip_conn_conf "..\private-fixtures\config-andy-qa-gtm-ve.yml" --address 6.6.6.6 --pool_name dr.enduser.myfake.vip.tpgtm.info --order 0 --port 80 -b 192.168.106.x
+# ruby -W0 f5_gtm_pool_create.rb --bigip_conn_conf "../private-fixtures/config-andy-qa-gtm-ve.yml" --address 6.6.6.6 --pool_name dr.enduser.myfake.vip.tpgtm.info --order 0 --port 80 -b 192.168.106.x
