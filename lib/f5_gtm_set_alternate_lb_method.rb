@@ -4,6 +4,12 @@ require 'pp'
 require 'ostruct'
 
 class Optparser
+
+
+  LB_METHODS = %w[LB_METHOD_GLOBAL_AVAILABILITY LB_METHOD_TOPOLOGY]
+  LB_METHOD_ALIASES = { "ga" => "LB_METHOD_GLOBAL_AVAILABILITY", "topology" => "LB_METHOD_TOPOLOGY"}
+
+
   def self.parse(args)
     options = OpenStruct.new
 
@@ -25,6 +31,11 @@ class Optparser
       end
  	    opts.on( "--pool_name POOL_NAME", "Name of GTM pool") do |pool_name|
         options.pool_name = pool_name
+      end
+      lb_method_list = (LB_METHOD_ALIASES.keys + LB_METHODS).join(",")
+      opts.on("--lb_method LB_METHOD", LB_METHODS, LB_METHOD_ALIASES, "Select LB Method",
+             "  (#{lb_method_list})") do |lb_method|
+         options.lb_method = lb_method
       end
       opts.on_tail("-h", "--help", "Show this message") do
         puts opts
