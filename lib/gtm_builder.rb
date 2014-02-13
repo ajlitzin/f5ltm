@@ -18,10 +18,10 @@ require 'pp'
 #global vars
 $debug = false
 
-dotcom_gtms_list = ["192.168.106.2"]
-doteu_gtms_list = ["192.168.106.2"]
-#dotcom_gtms_list = ["10.1.96.15", "10.20.96.15"]
-#doteu_gtms_list = ["10.20.96.16", "10.30.96.15"]
+#dotcom_gtms_list = ["192.168.106.2"]
+#doteu_gtms_list = ["192.168.106.2"]
+dotcom_gtms_list = ["10.1.96.15", "10.20.96.15"]
+doteu_gtms_list = ["10.20.96.16", "10.30.96.15"]
 PRIMARY_DOTEU_PARENT = "lon3bigip01"
 SECONDARY_DOTEU_PARENT = "phl1tpbigip03"
 PRIMARY_DOTCOM_PARENT = "sea1tpbigip03"
@@ -85,7 +85,7 @@ options.fqdn.downcase!
 
 if options.fqdn.end_with?("theplatform.eu")
   unless doteu_gtms_list.include?(options.bigip)
-    Kernel.abort "Unexpected GTM IP #{optons.bigip} for theplatform.eu"
+    Kernel.abort "Unexpected GTM IP #{options.bigip} for theplatform.eu"
   end
 elsif options.fqdn.end_with?("theplatform.com")
   unless dotcom_gtms_list.include?(options.bigip)
