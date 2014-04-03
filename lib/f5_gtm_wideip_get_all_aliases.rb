@@ -59,7 +59,7 @@ wide_ip_list = IO.readlines(options.wide_ips_file)
 wide_ip_list.each do | cur |
   cur.chomp!
 end
-pp wide_ip_list
+#pp wide_ip_list
 # returns a list of aliases per wideip
 my_alias_list_of_lists = gtm_wideip_get_alias_list(lb,wide_ip_list)
 my_alias_list_of_lists.flatten!
@@ -72,4 +72,4 @@ else
   end
 end
 
-# ruby -W0 f5_gtm_wideip_get_all_aliases.rb --bigip_conn_conf "..\private-fixtures\config-andy-qa-gtm-ve.yml" -b 192.168.106.x -wide_ips_file "../private-fixtures/my-list-of-wideips.txt"
+# ruby -W0 f5_gtm_wideip_get_all_aliases.rb --bigip_conn_conf "../private-fixtures/config-andy-qa-gtm-ve.yml" -b 192.168.106.x --wide_ips_file "../private-fixtures/my-list-of-wideips.txt"
