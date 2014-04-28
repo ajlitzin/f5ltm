@@ -47,6 +47,10 @@ end
 lb = F5::LoadBalancer.new(options.bigip, :config_file => options.bigip_conn_conf, :connect_timeout => 10)
 
 my_wip_list = gtm_wideip_get_list(lb)
-pp my_wip_list
+my_wip_list.each do |wip|
+  wip.gsub!(/\/Common\//,'')
+  puts wip.to_s.gsub(/"/,'')
+end
+#pp my_wip_list
 
 # ruby -W0 f5_gtm_wideip_get_list.rb --bigip_conn_conf "../private-fixtures/config-andy-qa-gtm-ve.yml" -b 192.168.106.x

@@ -201,7 +201,7 @@ when DNS_REQUEST {
 # SEA1 IP range (includes NAT for standard SEA1 LDNS)
   } elseif { [IP::addr [IP::remote_addr]/23 equals 206.79.64.0/23] } {
     pool #{pri_pool_name}
-# Internet client LDNS - generally go to SEA1 first (pool can fail to PHL3)
+# Internet client LDNS - generally go to SEA1 first (pool can fail to PHL1)
   } else {
     pool #{enduser_pool_name}
   }
