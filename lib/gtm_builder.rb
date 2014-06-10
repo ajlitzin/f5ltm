@@ -89,7 +89,7 @@ if options.fqdn.end_with?("theplatform.eu")
   end
 elsif options.fqdn.end_with?("theplatform.com")
   unless dotcom_gtms_list.include?(options.bigip)
-    Kernel.abort "Unexpected GTM IP #{optons.bigip} for theplatform.com"
+    Kernel.abort "Unexpected GTM IP #{options.bigip} for theplatform.com"
   end
 end
 
@@ -122,10 +122,13 @@ if options.failover_type.to_s == "dr"
   enduser_pool_name = "dr.enduser.#{options.fqdn}_#{options.vs_port}"
   pool_name_list = [pri_pool_name,sec_pool_name,enduser_pool_name]
 elsif options.failover_type.to_s == "geo"
-  pri_pool_name = "dr.#{pri_dc}.#{options.fqdn}_#{options.vs_port}"
-  sec_pool_name = "dr.#{sec_dc}.#{options.fqdn}_#{options.vs_port}"
+#  pri_pool_name = "dr.#{pri_dc}.#{options.fqdn}_#{options.vs_port}"
+#  sec_pool_name = "dr.#{sec_dc}.#{options.fqdn}_#{options.vs_port}"
+  pri_pool_name = nil
+  sec_pool_name = nil
   enduser_pool_name = "geo.enduser.#{options.fqdn}_#{options.vs_port}"
-  pool_name_list = [pri_pool_name,sec_pool_name,enduser_pool_name]
+#  pool_name_list = [pri_pool_name,sec_pool_name,enduser_pool_name]
+  pool_name_list = [enduser_pool_name]
 end
 
 ### create the pools
@@ -144,44 +147,44 @@ pool_name_list.each do |cur_pool_name|
     
 end  # pool name loop
       
-pp "adding #{pri_dc}.#{options.fqdn}_#{options.vs_port} vs to pool #{pri_pool_name}"
-# add pri member to pri pool
+# add members to the pri and sec pools, if they exist (they won't exist in the geo balanced case)
+unless pri_pool_name.nil?
+  pp "adding #{pri_dc}.#{options.fqdn}_#{options.vs_port} vs to pool #{pri_pool_name}"
+  # add pri member to pri pool
 
-output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{pri_pool_name} --address #{options.pri_vs_ip} --port #{options.vs_port} --order 0 }
+  output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{pri_pool_name} --address #{options.pri_vs_ip} --port #{options.vs_port} --order 0 }
 
-# add sec member to pri pool
+  # add sec member to pri pool
 
-output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{pri_pool_name} --address #{options.sec_vs_ip} --port #{options.vs_port} --order 1 }
+  output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{pri_pool_name} --address #{options.sec_vs_ip} --port #{options.vs_port} --order 1 }
 
-# If the enduser pool is not geo then disable sec member in pri pool
-# for geo vips we want to allow dr to auto fail (not disable the lower priority pool member)
-if enduser_pool_name.start_with?("dr")
+  # disable sec member in pri pool
   output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "#{sec_dc}.#{options.fqdn}_#{options.vs_port}" --parent_name #{sec_vs_parent} -s disabled --pool_name #{pri_pool_name} }
-end
-# add sec member to sec pool
-output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{sec_pool_name} --address #{options.sec_vs_ip} --port #{options.vs_port} --order 0 }
 
-# add pri member to sec pool
-output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{sec_pool_name} --address #{options.pri_vs_ip} --port #{options.vs_port} --order 1 }
-#
-# If the enduser pool is not geo then disable pri member in sec pool
-# for geo vips we want to allow dr to auto fail (not disable the lower priority pool member)
-if enduser_pool_name.start_with?("dr")
+  # add sec member to sec pool
+  output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{sec_pool_name} --address #{options.sec_vs_ip} --port #{options.vs_port} --order 0 }
+
+  # add pri member to sec pool
+  output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{sec_pool_name} --address #{options.pri_vs_ip} --port #{options.vs_port} --order 1 }
+
+  # disable pri member in sec pool
   output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "#{pri_dc}.#{options.fqdn}_#{options.vs_port}" --parent_name #{pri_vs_parent} -s disabled --pool_name #{sec_pool_name} }
 end
 
-# add pri member to enduser pool
-output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{enduser_pool_name} --address #{options.pri_vs_ip} --port #{options.vs_port} --order 0 }
-# add sec member to enduser pool
-output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{enduser_pool_name} --address #{options.sec_vs_ip} --port #{options.vs_port} --order 1 }
+  # add pri member to enduser pool
+  output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{enduser_pool_name} --address #{options.pri_vs_ip} --port #{options.vs_port} --order 0 }
+  # add sec member to enduser pool
+  output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{enduser_pool_name} --address #{options.sec_vs_ip} --port #{options.vs_port} --order 1 }
   
 # if the enduser pool is DR then disable the sec member in the enduser pool
 if enduser_pool_name.start_with?("dr")
   output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "#{sec_dc}.#{options.fqdn}_#{options.vs_port}" --parent_name #{sec_vs_parent} -s disabled --pool_name #{enduser_pool_name} }
 end
 
-# create the irules
-  
+# create the irules for dr services
+# no iRule needed for geo balanced services
+if enduser_pool_name.start_with?("dr") 
+
 doteu_irule_def = <<END_OF_DOTEU_IRULE
 when DNS_REQUEST {
 # log local0. "Client request IP: [IP::remote_addr]"
@@ -215,18 +218,24 @@ when DNS_REQUEST {
 END_OF_DOTCOM_IRULE
 
 
-pp "creating iRule #{options.fqdn}_rule..."
-#pp " irule def: '#{irule_def}'"
-if options.fqdn.end_with?("theplatform.eu")
-  output = %x{ruby -W0 f5_gtm_rule_create.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --rule_name #{options.fqdn}_rule --rule_def '#{doteu_irule_def}' }
-elsif options.fqdn.end_with?("theplatform.com")
-  output = %x{ruby -W0 f5_gtm_rule_create.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --rule_name #{options.fqdn}_rule --rule_def '#{dotcom_irule_def}' }
-end
+  pp "creating iRule #{options.fqdn}_rule..."
+  #pp " irule def: '#{irule_def}'"
+  if options.fqdn.end_with?("theplatform.eu")
+    output = %x{ruby -W0 f5_gtm_rule_create.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --rule_name #{options.fqdn}_rule --rule_def '#{doteu_irule_def}' }
+  elsif options.fqdn.end_with?("theplatform.com")
+    output = %x{ruby -W0 f5_gtm_rule_create.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --rule_name #{options.fqdn}_rule --rule_def '#{dotcom_irule_def}' }
+  end
 
-# create wideip and bind the iRule
-pp "creating wideip #{options.fqdn}..."
-output = %x{ruby -W0 f5_gtm_wideip_create.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --name #{options.fqdn} --rule_name #{options.fqdn}_rule }
+  # create wideip and bind the iRule
+  pp "creating wideip #{options.fqdn}..."
+  output = %x{ruby -W0 f5_gtm_wideip_create.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --name #{options.fqdn} --rule_name #{options.fqdn}_rule }
   
+# create the geo based wideip (single pool, no irule)
+elsif enduser_pool_name.start_with?("geo.enduser") 
+  pp "creating wideip #{options.fqdn}..."
+  # may need to adjust code in f5_gtm_wideip_create. to accept pools...
+  output = %x{ruby -W0 f5_gtm_wideip_create.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --name #{options.fqdn} --pool_name #{enduser_pool_name} --order 0 --ratio 0 }
+end
 # enable ipv6 NoError Response
 pp "enabling ipv6 NoError Response"
 output = %x{ruby -W0 f5_gtm_set_ipv6_no_error_response_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --wip_name #{options.fqdn} -s enabled}
