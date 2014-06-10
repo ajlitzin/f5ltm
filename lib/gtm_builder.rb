@@ -24,8 +24,8 @@ dotcom_gtms_list = ["10.1.96.15", "10.20.96.15"]
 doteu_gtms_list = ["10.20.96.16", "10.30.96.15"]
 PRIMARY_DOTEU_PARENT = "lon3bigip01"
 SECONDARY_DOTEU_PARENT = "phl1tpbigip03"
-PRIMARY_DOTCOM_PARENT = "sea1tpbigip03"
-SECONDARY_DOTCOM_PARENT = "phl1tpbigip03"
+PRIMARY_DOTCOM_PARENT = "SEA1TPBIGIP03"
+SECONDARY_DOTCOM_PARENT = "PHL1TPBIGIP03"
 
 class Optparser
   def self.parse(args)
@@ -132,10 +132,9 @@ end
 pool_name_list.each do |cur_pool_name|
   pp "creating gtm pool #{cur_pool_name}..."
 
-  if cur_pool_name.start_with?("geo")
+  if cur_pool_name.start_with?("geo.enduser")
     output = %x{ruby -W0 f5_gtm_pool_create.rb  --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{cur_pool_name} --lb_method topology}
-
-  elsif cur_pool_name.start_with?("dr")
+  else 
     output = %x{ruby -W0 f5_gtm_pool_create.rb  --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{cur_pool_name} --lb_method ga}
   end
   # set alt lb method
@@ -154,25 +153,32 @@ output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip
 
 output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{pri_pool_name} --address #{options.sec_vs_ip} --port #{options.vs_port} --order 1 }
 
-# disable sec member in pri pool
-output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "#{sec_dc}.#{options.fqdn}_#{options.vs_port}" --parent_name #{sec_vs_parent} -s disabled --pool_name #{pri_pool_name} }
-
+# If the enduser pool is not geo then disable sec member in pri pool
+# for geo vips we want to allow dr to auto fail (not disable the lower priority pool member)
+if enduser_pool_name.start_with?("dr")
+  output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "#{sec_dc}.#{options.fqdn}_#{options.vs_port}" --parent_name #{sec_vs_parent} -s disabled --pool_name #{pri_pool_name} }
+end
 # add sec member to sec pool
 output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{sec_pool_name} --address #{options.sec_vs_ip} --port #{options.vs_port} --order 0 }
 
 # add pri member to sec pool
 output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{sec_pool_name} --address #{options.pri_vs_ip} --port #{options.vs_port} --order 1 }
 #
-# disable pri member in sec pool
-output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "#{pri_dc}.#{options.fqdn}_#{options.vs_port}" --parent_name #{pri_vs_parent} -s disabled --pool_name #{sec_pool_name} }
+# If the enduser pool is not geo then disable pri member in sec pool
+# for geo vips we want to allow dr to auto fail (not disable the lower priority pool member)
+if enduser_pool_name.start_with?("dr")
+  output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "#{pri_dc}.#{options.fqdn}_#{options.vs_port}" --parent_name #{pri_vs_parent} -s disabled --pool_name #{sec_pool_name} }
+end
 
 # add pri member to enduser pool
 output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{enduser_pool_name} --address #{options.pri_vs_ip} --port #{options.vs_port} --order 0 }
 # add sec member to enduser pool
 output = %x{ruby -W0 f5_gtm_pool_add_member.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --pool_name #{enduser_pool_name} --address #{options.sec_vs_ip} --port #{options.vs_port} --order 1 }
   
-# disable the sec member in the enduser pool
-output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "#{sec_dc}.#{options.fqdn}_#{options.vs_port}" --parent_name #{sec_vs_parent} -s disabled --pool_name #{enduser_pool_name} }
+# if the enduser pool is DR then disable the sec member in the enduser pool
+if enduser_pool_name.start_with?("dr")
+  output = %x{ruby -W0 f5_gtm_set_pool_member_enabled_state.rb --bigip_conn_conf #{options.bigip_conn_conf} --bigip #{options.bigip} --vs_name "#{sec_dc}.#{options.fqdn}_#{options.vs_port}" --parent_name #{sec_vs_parent} -s disabled --pool_name #{enduser_pool_name} }
+end
 
 # create the irules
   
