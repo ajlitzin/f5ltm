@@ -93,7 +93,11 @@ else
   my_wip_pool_list = [WideIPPool.new(options.pool_name, options.order, options.ratio).to_hash]
 end
 
-my_wip_rule_list = [WideIPRule.new(options.rule_name, options.rule_priority).to_hash]
+if options.rule_name == ""
+  my_wip_rule_list = []
+else
+  my_wip_rule_list = [WideIPRule.new(options.rule_name, options.rule_priority).to_hash]
+end
 
 pp "my_wip_pool_list: #{my_wip_pool_list} \n"
 pp "my_wip_rule_list: #{my_wip_rule_list} \n"
