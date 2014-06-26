@@ -137,6 +137,10 @@ end
 lb = F5::LoadBalancer.new(options.bigip, :config_file => options.bigip_conn_conf, :connect_timeout => 10)
 
 # Get a list of all the pre-existing pools
+existing_virtual_servers = get_virtual_server_list(lb)
+# normalize the pool names
+existing_virtual_servers.each {|vs_name| vs_name.downcase!}
+# Get a list of all the pre-existing pools
 existing_pools = get_pool_list(lb)
 # normalize the pool names
 existing_pools.each {|pool_name| pool_name.downcase!}
@@ -216,30 +220,33 @@ if service_list.empty?
   
   vs_yaml_conf.virtual_server["default_pool_name"] = update_object_name(vs_yaml_conf.virtual_server["default_pool_name"].to_s, vs_yaml_conf.pool["port"], vs_yaml_conf.main["fqdn"].to_s)
   
-  pp "creating virtual server #{vs_yaml_conf.virtual_server["name"]}..."
-  pp "vs resource type:#{vs_yaml_conf.virtual_server["resource_type"]} --pool_name #{vs_yaml_conf.virtual_server["default_pool_name"]} --profile_context #{vs_yaml_conf.virtual_server["profile_context"]}}"
+  # if the vs already exists, skip a bunch of work
+  unless existing_virtual_servers.include?("#{vs_yaml_conf.virtual_server["[name"].downcase}")
+
+    pp "creating virtual server #{vs_yaml_conf.virtual_server["name"]}..."
+    pp "vs resource type:#{vs_yaml_conf.virtual_server["resource_type"]} --pool_name #{vs_yaml_conf.virtual_server["default_pool_name"]} --profile_context #{vs_yaml_conf.virtual_server["profile_context"]}}"
   
-  output = %x{ruby -W0 f5_vs_create.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --address #{vs_yaml_conf.virtual_server["address"].to_s}  --mask #{vs_yaml_conf.virtual_server["netmask"]} --name #{vs_yaml_conf.virtual_server["name"]} --port #{vs_yaml_conf.virtual_server["port"]} --protocol #{vs_yaml_conf.virtual_server["protocol"]} --resource_type #{vs_yaml_conf.virtual_server["resource_type"]} --pool_name #{vs_yaml_conf.virtual_server["default_pool_name"]} --profile_name #{vs_yaml_conf.virtual_server["profile_name"]}}
-# not sending this in stopped the error, but it still didn't link the vs to the pool or use the right profile for DBs   
+    output = %x{ruby -W0 f5_vs_create.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --address #{vs_yaml_conf.virtual_server["address"].to_s}  --mask #{vs_yaml_conf.virtual_server["netmask"]} --name #{vs_yaml_conf.virtual_server["name"]} --port #{vs_yaml_conf.virtual_server["port"]} --protocol #{vs_yaml_conf.virtual_server["protocol"]} --resource_type #{vs_yaml_conf.virtual_server["resource_type"]} --pool_name #{vs_yaml_conf.virtual_server["default_pool_name"]} --profile_name #{vs_yaml_conf.virtual_server["profile_name"]}}
+  # not sending this in stopped the error, but it still didn't link the vs to the pool or use the right profile for DBs   
    # --profile_context #{vs_yaml_conf.virtual_server["profile_context"]}}
   
-  ###### update VS settings ######
-  ### add snat if necessary
-  unless vs_yaml_conf.virtual_server["snat"].nil?
-    output = %x{ruby -W0 f5_vs_set_snat_pool.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs_name #{vs_yaml_conf.virtual_server["name"]} --snat_pool_name #{vs_yaml_conf.virtual_server["snat"]} }
-  end
+    ###### update VS settings ######
+    ### add snat if necessary
+    unless vs_yaml_conf.virtual_server["snat"].nil?
+      output = %x{ruby -W0 f5_vs_set_snat_pool.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs_name #{vs_yaml_conf.virtual_server["name"]} --snat_pool_name #{vs_yaml_conf.virtual_server["snat"]} }
+    end
   
-  ### set mirrored state- should only be enabled for DBs
-  unless vs_yaml_conf.virtual_server["mirrored_state"].empty?
-    pp "setting mirrored enabled state"
-    output = %x{ruby -W0 f5_vs_set_connection_mirror_state.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs_name #{vs_yaml_conf.virtual_server["name"]} --mirrored_state #{vs_yaml_conf.virtual_server["mirrored_state"]} }
-  end
-  ### set vlan- generally should be empty.
-  unless vs_yaml_conf.virtual_server["vlan_name"].empty?
-    pp "setting enabled vlan"
-    output = %x{ruby -W0 f5_vs_set_vlan.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs_name #{vs_yaml_conf.virtual_server["name"]} --vlan_name #{vs_yaml_conf.virtual_server["vlan_name"]} }
-  end
-  
+    ### set mirrored state- should only be enabled for DBs
+    unless vs_yaml_conf.virtual_server["mirrored_state"].empty?
+      pp "setting mirrored enabled state"
+      output = %x{ruby -W0 f5_vs_set_connection_mirror_state.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs_name #{vs_yaml_conf.virtual_server["name"]} --mirrored_state #{vs_yaml_conf.virtual_server["mirrored_state"]} }
+    end
+    ### set vlan- generally should be empty.
+    unless vs_yaml_conf.virtual_server["vlan_name"].empty?
+      pp "setting enabled vlan"
+      output = %x{ruby -W0 f5_vs_set_vlan.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs_name #{vs_yaml_conf.virtual_server["name"]} --vlan_name #{vs_yaml_conf.virtual_server["vlan_name"]} }
+    end
+  end # virtual server name check 
 else ### loop through each service and create vs/pool/monitor/etc
     
   service_list.each do |service_num|
@@ -322,46 +329,52 @@ else ### loop through each service and create vs/pool/monitor/etc
     
     end # pool pre-existance check
 
-    ### create the virtual server
+
+
+    ### virtual server work
     
     current_service_conf.virtual_server["name"] = update_object_name(current_service_conf.virtual_server["name"].to_s, current_service_conf.virtual_server["port"], current_service_conf.main["fqdn"].to_s)
     
     current_service_conf.virtual_server["default_pool_name"] = update_object_name(current_service_conf.virtual_server["default_pool_name"].to_s, current_service_conf.pool["port"], current_service_conf.main["fqdn"].to_s)
+
+    # if the vs already exists, skip a bunch of work
+    unless existing_virtual_servers.include?("#{current_service_conf.virtual_server["[name"].downcase}")
     
-    pp "creating virtual server #{current_service_conf.virtual_server["name"]}..."
-    #output = %x{ruby -W0 f5_vs_create.rb --bigip #{options.bigip}  --bigip_conn_conf #{options.bigip_conn_conf} --address #{current_service_conf.virtual_server["address"].to_s}  --mask #{current_service_conf.virtual_server["netmask"]} --name #{current_service_conf.virtual_server["name"]} --port #{current_service_conf.virtual_server["port"]} --protocol #{current_service_conf.virtual_server["protocol"]} --resource_type #{current_service_conf.virtual_server["resource_type"]} --pool_name #{current_service_conf.virtual_server["default_pool_name"]} --profile_context #{current_service_conf.virtual_server["profile_context"]}}
+      pp "creating virtual server #{current_service_conf.virtual_server["name"]}..."
+      #output = %x{ruby -W0 f5_vs_create.rb --bigip #{options.bigip}  --bigip_conn_conf #{options.bigip_conn_conf} --address #{current_service_conf.virtual_server["address"].to_s}  --mask #{current_service_conf.virtual_server["netmask"]} --name #{current_service_conf.virtual_server["name"]} --port #{current_service_conf.virtual_server["port"]} --protocol #{current_service_conf.virtual_server["protocol"]} --resource_type #{current_service_conf.virtual_server["resource_type"]} --pool_name #{current_service_conf.virtual_server["default_pool_name"]} --profile_context #{current_service_conf.virtual_server["profile_context"]}}
     
-    output = %x{ruby -W0 f5_vs_create.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --address #{current_service_conf.virtual_server["address"].to_s}  --mask #{current_service_conf.virtual_server["netmask"]} --name #{current_service_conf.virtual_server["name"]} --port #{current_service_conf.virtual_server["port"]} --protocol #{current_service_conf.virtual_server["protocol"]} --resource_type #{current_service_conf.virtual_server["resource_type"]} --pool_name #{current_service_conf.virtual_server["default_pool_name"]} --profile_name #{current_service_conf.virtual_server["profile_name"]}}
-# not sending this in stopped the error, but it still didn't link the vs to the pool or use the right profile for DBs   
-   # --profile_context #{current_service_conf.virtual_server["profile_context"]}}
+      output = %x{ruby -W0 f5_vs_create.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --address #{current_service_conf.virtual_server["address"].to_s}  --mask #{current_service_conf.virtual_server["netmask"]} --name #{current_service_conf.virtual_server["name"]} --port #{current_service_conf.virtual_server["port"]} --protocol #{current_service_conf.virtual_server["protocol"]} --resource_type #{current_service_conf.virtual_server["resource_type"]} --pool_name #{current_service_conf.virtual_server["default_pool_name"]} --profile_name #{current_service_conf.virtual_server["profile_name"]}}
+  # not sending this in stopped the error, but it still didn't link the vs to the pool or use the right profile for DBs   
+     # --profile_context #{current_service_conf.virtual_server["profile_context"]}}
+      
+      ###### update VS settings ######
+      ### add snat if necessary
+      unless current_service_conf.virtual_server["snat"].nil?
+        pp "associating virtual server with snat pool..."
+        output = %x{ruby -W0 f5_vs_set_snat_pool.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs_name #{current_service_conf.virtual_server["name"]} --snat_pool_name #{current_service_conf.virtual_server["snat"]} }
+      end
+      ### set mirrored state- should only be enabled for DBs
+      unless current_service_conf.virtual_server["mirrored_state"].empty?
+        pp "setting mirrored enabled state"
+        output = %x{ruby -W0 f5_vs_set_connection_mirror_state.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs_name #{current_service_conf.virtual_server["name"]} --mirrored_state #{current_service_conf.virtual_server["mirrored_state"]} }
+      end
+      ### set vlan- generally should be empty.
+      unless current_service_conf.virtual_server["vlan_name"].empty?
+        pp "setting enabled vlan"
+        output = %x{ruby -W0 f5_vs_set_vlan.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs_name #{current_service_conf.virtual_server["name"]} --vlan_name #{current_service_conf.virtual_server["vlan_name"]} }
+      end
     
-    ###### update VS settings ######
-    ### add snat if necessary
-    unless current_service_conf.virtual_server["snat"].nil?
-      pp "associating virtual server with snat pool..."
-      output = %x{ruby -W0 f5_vs_set_snat_pool.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs_name #{current_service_conf.virtual_server["name"]} --snat_pool_name #{current_service_conf.virtual_server["snat"]} }
-    end
-    ### set mirrored state- should only be enabled for DBs
-    unless current_service_conf.virtual_server["mirrored_state"].empty?
-      pp "setting mirrored enabled state"
-      output = %x{ruby -W0 f5_vs_set_connection_mirror_state.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs_name #{current_service_conf.virtual_server["name"]} --mirrored_state #{current_service_conf.virtual_server["mirrored_state"]} }
-    end
-    ### set vlan- generally should be empty.
-    unless current_service_conf.virtual_server["vlan_name"].empty?
-      pp "setting enabled vlan"
-      output = %x{ruby -W0 f5_vs_set_vlan.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs_name #{current_service_conf.virtual_server["name"]} --vlan_name #{current_service_conf.virtual_server["vlan_name"]} }
-    end
-    
-    unless current_service_conf.virtual_server["ssl_client_profile"].empty?
-      pp "creating ssl client profile"
-      # need v2 for 11.x and non v2 for 10.x
-      output = %x{ruby -W0 f5_ssl_client_profile_create_v2.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --profile #{current_service_conf.virtual_server["ssl_client_profile"]} --key-name #{current_service_conf.virtual_server["ssl_client_profile"].sub(/_ssl$/,'.key')} --cert-name #{current_service_conf.virtual_server["ssl_client_profile"].sub(/_ssl$/,'.crt')}  }
-      pp "chaining the ssl client profile to the CA intermediate cert"
-      # hard coded to Entrust, v2 is for 11.x up
-      output = %x{ruby -W0 f5_ssl_client_profile_set_chain_file_v2.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --profile #{current_service_conf.virtual_server["ssl_client_profile"]} --chain-file-name "EntrustL1CChain.crt"  }
-      pp "linking ssl client profile"
-      output = %x{ruby -W0 f5_vs_add_profile.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs-name #{current_service_conf.virtual_server["name"]} --profile #{current_service_conf.virtual_server["ssl_client_profile"]} --profile-context-type "PROFILE_CONTEXT_TYPE_CLIENT"  }
-    end
+      unless current_service_conf.virtual_server["ssl_client_profile"].empty?
+        pp "creating ssl client profile"
+        # need v2 for 11.x and non v2 for 10.x
+        output = %x{ruby -W0 f5_ssl_client_profile_create_v2.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --profile #{current_service_conf.virtual_server["ssl_client_profile"]} --key-name #{current_service_conf.virtual_server["ssl_client_profile"].sub(/_ssl$/,'.key')} --cert-name #{current_service_conf.virtual_server["ssl_client_profile"].sub(/_ssl$/,'.crt')}  }
+        pp "chaining the ssl client profile to the CA intermediate cert"
+        # hard coded to Entrust, v2 is for 11.x up
+        output = %x{ruby -W0 f5_ssl_client_profile_set_chain_file_v2.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --profile #{current_service_conf.virtual_server["ssl_client_profile"]} --chain-file-name "EntrustL1CChain.crt"  }
+        pp "linking ssl client profile"
+        output = %x{ruby -W0 f5_vs_add_profile.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs-name #{current_service_conf.virtual_server["name"]} --profile #{current_service_conf.virtual_server["ssl_client_profile"]} --profile-context-type "PROFILE_CONTEXT_TYPE_CLIENT"  }
+      end
+    end #virtual server name check
   end
 end
 
