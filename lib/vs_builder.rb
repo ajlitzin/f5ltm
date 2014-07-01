@@ -135,20 +135,31 @@ def correct_lb_method(method)
   end
 end
 
+def normalize_names(names)
+  names.each {|name| name.downcase!}
+  # remove the "common" parition name
+  # if you use multiple partitions you'll want to extend code to make it work
+  names.each {|name| name.gsub!(/\/common\//,"")}
+end
+
 lb = F5::LoadBalancer.new(options.bigip, :config_file => options.bigip_conn_conf, :connect_timeout => 10)
 
 # Get a list of all the pre-existing pools
 existing_virtual_servers = get_vs_list(lb)
+# normalize the names
+normalize_names(existing_virtual_servers)
 # normalize the pool names
-existing_virtual_servers.each {|vs_name| vs_name.downcase!}
+#existing_virtual_servers.each {|vs_name| vs_name.downcase!}
 # remove the common parition name
 # if you use multiple partitions you'll want to extend code to make it work
-existing_virtual_servers.each {|vs_name| vs_name.gsub!(/\/common\//,"")}
+#existing_virtual_servers.each {|vs_name| vs_name.gsub!(/\/common\//,"")}
+
 # Get a list of all the pre-existing pools
 existing_pools = get_pool_list(lb)
 # normalize the pool names
-existing_pools.each {|pool_name| pool_name.downcase!}
-existing_pools.each {|pool_name| pool_name.gsub!(/\/common\//,"")}
+normalize_names(existing_pools)
+#existing_pools.each {|pool_name| pool_name.downcase!}
+#existing_pools.each {|pool_name| pool_name.gsub!(/\/common\//,"")}
 
 if service_list.empty?
   # create vs/pool/monitor/etc for the single service defined
@@ -217,7 +228,7 @@ if service_list.empty?
     pp "associating monitor with pool"
     monassoc_output = %x{ruby -W0 f5_pool_set_monitor_association.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --pool_name #{vs_yaml_conf.pool["name"]} --monitor_name #{vs_yaml_conf.monitor["name"]} }
   else
-    pp "pool #{vs_yaml_conf.pool["name"]} already exists- skipping..."
+    pp "skipping pool #{vs_yaml_conf.pool["name"]}- it already exists..."
   end # pool already exists check
 
   ### create the virtual server
@@ -253,12 +264,20 @@ if service_list.empty?
       output = %x{ruby -W0 f5_vs_set_vlan.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs_name #{vs_yaml_conf.virtual_server["name"]} --vlan_name #{vs_yaml_conf.virtual_server["vlan_name"]} }
     end
   else
-    pp "virtual server #{vs_yaml_conf.virtual_server["name"].to_s} already exists, skipping..."
+    pp "skipping virtual server #{vs_yaml_conf.virtual_server["name"].to_s}- it already exists..."
   end # virtual server name check 
 else ### loop through each service and create vs/pool/monitor/etc
     
   service_list.each do |service_num|
-    
+    # Get a list of all the pre-existing virtual servers
+    existing_virtual_servers = get_vs_list(lb)
+    # normalize the names
+    normalize_names(existing_virtual_servers)
+    # Get a list of all the pre-existing pools
+    existing_pools = get_pool_list(lb)
+    # normalize the pool names
+    normalize_names(existing_pools)
+
     # create an array of objects.  there might be an easier way to do this,
     # we get the ability to use "." notation
     current_service_conf = OpenStruct.new(vs_yaml_conf.send(service_num))
@@ -335,7 +354,7 @@ else ### loop through each service and create vs/pool/monitor/etc
       pp "associating monitor with pool..."
       monassoc_output = %x{ruby -W0 f5_pool_set_monitor_association.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --pool_name #{current_service_conf.pool["name"]} --monitor_name #{current_service_conf.monitor["name"]} }
     else
-      pp "pool #{current_service_conf.pool["name"].to_s} already exists, skipping..."
+      pp "skipping pool #{current_service_conf.pool["name"].to_s}- it already exists..."
     end # pool pre-existance check
 
 
@@ -384,7 +403,7 @@ else ### loop through each service and create vs/pool/monitor/etc
         output = %x{ruby -W0 f5_vs_add_profile.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs-name #{current_service_conf.virtual_server["name"]} --profile #{current_service_conf.virtual_server["ssl_client_profile"]} --profile-context-type "PROFILE_CONTEXT_TYPE_CLIENT"  }
       end
     else
-      pp "virtual server #{current_service_conf.virtual_server["name"]} already exists, skipping..."
+      pp "skipping virtual server #{current_service_conf.virtual_server["name"]}- it already exists..."
     end #virtual server name check
   end
 end
