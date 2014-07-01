@@ -28,6 +28,7 @@ require 'yaml'
 require 'ostruct'
 require 'optparse'
 require 'pp'
+require './f5'
 
 class Optparser
   def self.parse(args)
@@ -137,13 +138,23 @@ end
 lb = F5::LoadBalancer.new(options.bigip, :config_file => options.bigip_conn_conf, :connect_timeout => 10)
 
 # Get a list of all the pre-existing pools
-existing_virtual_servers = get_virtual_server_list(lb)
+existing_virtual_servers = get_vs_list(lb)
 # normalize the pool names
 existing_virtual_servers.each {|vs_name| vs_name.downcase!}
+# remove the common parition name
+# if you use multiple partitions you'll want to extend code to make it work
+existing_virtual_servers.each {|vs_name| vs_name.gsub!(/\/common\//,"")}
+#pp "existing vs list: #{existing_virtual_servers}"
+pp "existing vs list:"
+existing_virtual_servers.each do |x|
+  pp "#{x}"
+end
 # Get a list of all the pre-existing pools
 existing_pools = get_pool_list(lb)
 # normalize the pool names
 existing_pools.each {|pool_name| pool_name.downcase!}
+existing_pools.each {|pool_name| pool_name.gsub!(/\/common\//,"")}
+pp "existing pool list: #{existing_pools}"
 
 if service_list.empty?
   # create vs/pool/monitor/etc for the single service defined
@@ -170,7 +181,7 @@ if service_list.empty?
   member_flag_list = create_member_flag_list(member_list)
 
   # skip pool related activity for pool that already exists
-  unless existing_pools.include?("#{vs_yaml_conf.pool["name"].downcase}")
+  unless existing_pools.include?("#{vs_yaml_conf.pool["name"].to_s.downcase}")
     ### creating pool
     pp "creating pool #{vs_yaml_conf.pool["name"]}..."
     output = %x{ruby -W0 f5_pool_create.rb --name #{vs_yaml_conf.pool["name"]} #{member_flag_list} --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf}}
@@ -211,7 +222,8 @@ if service_list.empty?
     ### associate monitor template with pool
     pp "associating monitor with pool"
     monassoc_output = %x{ruby -W0 f5_pool_set_monitor_association.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --pool_name #{vs_yaml_conf.pool["name"]} --monitor_name #{vs_yaml_conf.monitor["name"]} }
-  
+  else
+    pp "pool #{vs_yaml_conf.pool["name"]} already exists- skipping..."
   end # pool already exists check
 
   ### create the virtual server
@@ -221,7 +233,7 @@ if service_list.empty?
   vs_yaml_conf.virtual_server["default_pool_name"] = update_object_name(vs_yaml_conf.virtual_server["default_pool_name"].to_s, vs_yaml_conf.pool["port"], vs_yaml_conf.main["fqdn"].to_s)
   
   # if the vs already exists, skip a bunch of work
-  unless existing_virtual_servers.include?("#{vs_yaml_conf.virtual_server["[name"].downcase}")
+  unless existing_virtual_servers.include?("#{vs_yaml_conf.virtual_server["name"].to_s.downcase}")
 
     pp "creating virtual server #{vs_yaml_conf.virtual_server["name"]}..."
     pp "vs resource type:#{vs_yaml_conf.virtual_server["resource_type"]} --pool_name #{vs_yaml_conf.virtual_server["default_pool_name"]} --profile_context #{vs_yaml_conf.virtual_server["profile_context"]}}"
@@ -246,6 +258,8 @@ if service_list.empty?
       pp "setting enabled vlan"
       output = %x{ruby -W0 f5_vs_set_vlan.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs_name #{vs_yaml_conf.virtual_server["name"]} --vlan_name #{vs_yaml_conf.virtual_server["vlan_name"]} }
     end
+  else
+    pp "virtual server #{vs_yaml_conf.virtual_server["name"].to_s} already exists, skipping..."
   end # virtual server name check 
 else ### loop through each service and create vs/pool/monitor/etc
     
@@ -276,7 +290,7 @@ else ### loop through each service and create vs/pool/monitor/etc
    
 
     # if the pool already exists, skip a bunch of work
-    unless existing_pools.include?("#{current_service_conf.pool["[name"].downcase}")
+    unless existing_pools.include?("#{current_service_conf.pool["name"].to_s.downcase}")
       ### creating pool
       pp "creating pool #{current_service_conf.pool["name"].to_s}..."
       output = %x{ruby -W0 f5_pool_create.rb --name #{current_service_conf.pool["name"]} #{member_flag_list} --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --lb_method #{current_service_conf.pool["lb_method"]}}
@@ -326,7 +340,8 @@ else ### loop through each service and create vs/pool/monitor/etc
       ### associate monitor template with pool
       pp "associating monitor with pool..."
       monassoc_output = %x{ruby -W0 f5_pool_set_monitor_association.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --pool_name #{current_service_conf.pool["name"]} --monitor_name #{current_service_conf.monitor["name"]} }
-    
+    else
+      pp "pool #{current_service_conf.pool["name"].to_s} already exists, skipping..."
     end # pool pre-existance check
 
 
@@ -338,7 +353,7 @@ else ### loop through each service and create vs/pool/monitor/etc
     current_service_conf.virtual_server["default_pool_name"] = update_object_name(current_service_conf.virtual_server["default_pool_name"].to_s, current_service_conf.pool["port"], current_service_conf.main["fqdn"].to_s)
 
     # if the vs already exists, skip a bunch of work
-    unless existing_virtual_servers.include?("#{current_service_conf.virtual_server["[name"].downcase}")
+    unless existing_virtual_servers.include?("#{current_service_conf.virtual_server["name"].to_s.downcase}")
     
       pp "creating virtual server #{current_service_conf.virtual_server["name"]}..."
       #output = %x{ruby -W0 f5_vs_create.rb --bigip #{options.bigip}  --bigip_conn_conf #{options.bigip_conn_conf} --address #{current_service_conf.virtual_server["address"].to_s}  --mask #{current_service_conf.virtual_server["netmask"]} --name #{current_service_conf.virtual_server["name"]} --port #{current_service_conf.virtual_server["port"]} --protocol #{current_service_conf.virtual_server["protocol"]} --resource_type #{current_service_conf.virtual_server["resource_type"]} --pool_name #{current_service_conf.virtual_server["default_pool_name"]} --profile_context #{current_service_conf.virtual_server["profile_context"]}}
@@ -374,6 +389,8 @@ else ### loop through each service and create vs/pool/monitor/etc
         pp "linking ssl client profile"
         output = %x{ruby -W0 f5_vs_add_profile.rb --bigip #{options.bigip} --bigip_conn_conf #{options.bigip_conn_conf} --vs-name #{current_service_conf.virtual_server["name"]} --profile #{current_service_conf.virtual_server["ssl_client_profile"]} --profile-context-type "PROFILE_CONTEXT_TYPE_CLIENT"  }
       end
+    else
+      pp "virtual server #{current_service_conf.virtual_server["name"]} already exists, skipping..."
     end #virtual server name check
   end
 end
