@@ -144,17 +144,11 @@ existing_virtual_servers.each {|vs_name| vs_name.downcase!}
 # remove the common parition name
 # if you use multiple partitions you'll want to extend code to make it work
 existing_virtual_servers.each {|vs_name| vs_name.gsub!(/\/common\//,"")}
-#pp "existing vs list: #{existing_virtual_servers}"
-pp "existing vs list:"
-existing_virtual_servers.each do |x|
-  pp "#{x}"
-end
 # Get a list of all the pre-existing pools
 existing_pools = get_pool_list(lb)
 # normalize the pool names
 existing_pools.each {|pool_name| pool_name.downcase!}
 existing_pools.each {|pool_name| pool_name.gsub!(/\/common\//,"")}
-pp "existing pool list: #{existing_pools}"
 
 if service_list.empty?
   # create vs/pool/monitor/etc for the single service defined
